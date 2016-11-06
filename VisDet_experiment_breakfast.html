@@ -1,0 +1,874 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Visual detection experiment</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="jspsych-5.0.3/jspsych.js"></script>
+    <script src="jspsych-5.0.3/plugins/jspsych-text.js"></script>
+    <script src="jspsych-5.0.3/plugins/jspsych-instructions.js"></script>
+    <script src="jspsych-5.0.3/plugins/jspsych-button-response-jw.js"></script>    
+    <script src="jspsych-5.0.3/plugins/jspsych-visdet.js"></script>
+    <script src="jspsych-5.0.3/plugins/jspsych-survey-likert-required.js"></script>
+	<script src="jspsych-5.0.3/plugins/jspsych-single-stim.js"></script>
+	<script src="jspsych-5.0.3/plugins/jspsych-single-stim-showtime.js"></script>
+	
+    <script src="jspsych-5.0.3/plugins/jspsych-survey-text.js"></script>
+    <script src="jspsych-5.0.3/plugins/jspsych-survey-multi-choice.js"></script>
+    <script src="platform.js"></script>
+    <link href="jspsych-5.0.3/css/jspsych-visdet_NL_21_10.css" rel="stylesheet" type="text/css"></link>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+</head>
+
+<body>
+</body>
+<script>
+    // !!! (at the moment, pick this manually), otherwise randomly choose whether this will be an easy or hard session at the start of the experiment
+    var currSession; // = 'hard'; //jsPsych.randomization.sample(['easy', 'hard'], 1)[0];
+	var sessionStartTime = new Date().getTime();
+	var allErrors = ''; 	// string in which error messages will be posted
+	
+    /* =============== Experiment Preferences & Stimuli =============== */
+    // get variables from URL or set defaults
+	var subjectCode = jsPsych.data.getURLVariable('subject') || "sub999";
+	currSession =  jsPsych.data.getURLVariable('session') || "practice";
+	subjectCode = subjectCode.toLowerCase();
+	currSession = currSession.toLowerCase();
+	console.log('SubjectCode '+subjectCode+', currSession '+currSession);
+	
+	// read subject info from file
+	var subjInfo = readSubjectInfo(subjectCode);
+	//console.log('JSON subject info for subject: '+subjectCode);
+	//console.log(subjInfo);
+	
+    // INFO structure with experiment preferences
+    var INFO = {
+        nBlocks: 1,
+        nLowFreqTrialsPerBlock: 13, // for 19.5 minutes
+        nHighFreqTrialsPerBlock: 52, // for 19.5 minutes
+        trialDuration: 15000,	// duration of each trial (msec)
+        categoryInstructDuration: 3000,	// duration of category instruction (msec) at start trials
+        nImgMasks2Preload: 30,
+        nImgPerCategory2Preload: 15,
+        nPracticeTrials: 2,
+		saveMethod: 'csv',
+		getIP: false, 	// should we check IP address? (warning:seems to trigger ad blockers )
+		displayTimeTriggers: false, 	// controls whether internal time (of phone/pc) is shown on the screen at the start and end of experiment, used as time triggers to synchronise (only necessary when doing task in the lab)
+        respLetterLocation: 4,  // obsolete? location of category letter (for img/G35.jpg    
+        task_version: 1.0, 	// version number of task
+	};
+    //console.log(INFO);
+
+	// get IP + location information
+	var subject_city;
+	var subject_ip;
+	//$(function () {
+	function getIPinfo(){
+		//var IPinfo;
+		var subject_city;
+		var subject_ip;
+		// $ (dollar sign) denotes jquery request
+		var JSONdata;
+		var JSONout = $.getJSON('http://freegeoip.net/json/?callback=?', function (location, textStatus, jqXHR) {
+			//console.log("callback running");
+			//console.log(textStatus);
+			//console.log(jqXHR);
+			if (textStatus == 'success') {
+				subject_city = jqXHR.responseJSON.city;
+				subject_ip = jqXHR.responseJSON.ip;
+				//console.log(jqXHR);
+				//$('#region-name').html(location.region_name);
+			};
+		});
+		return JSONout;
+/*		console.log('JSON info:');
+		console.log(JSONout);
+		console.log('JSONdata:');
+		console.log(JSONdata);
+		console.log(Object.getOwnPropertyNames(JSONout));
+		console.log(JSONout.getAllResponseHeaders);
+		console.log(JSONout.responseJSON.city);
+		return {
+			subject_city: JSONout.responseJSON.city,
+			subject_ip: JSONout.responseJSON.ip
+			};*/
+	};
+	if (INFO.getIP == true) {
+		var IPinfo = getIPinfo(); // asynchronous request, we'll see at the end of the script if we got a response
+	}
+	//console.log(IPinfo);
+	
+    // define all tools images
+    var imgsTools2ChooseFrom = ['G01.jpg', 'G02.jpg', 'G03.jpg', 'G04.jpg', 'G05.jpg', 'G06.jpg', 'G07.jpg', 'G08.jpg', 'G09.jpg', 'G10.jpg', 'G11.jpg', 'G12.jpg', 'G13.jpg', 'G14.jpg', 'G15.jpg', 'G16.jpg', 'G17.jpg', 'G18.jpg', 'G19.jpg', 'G20.jpg', 'G21.jpg', 'G22.jpg', 'G23.jpg', 'G24.jpg', 'G25.jpg', 'G26.jpg', 'G27.jpg', 'G28.jpg', 'G29.jpg', 'G30.jpg', 'G31.jpg', 'G32.jpg', 'G33.jpg', 'G34.jpg', 'G35.jpg', 'G36.jpg', 'G37.jpg', 'G38.jpg', 'G39.jpg', 'G40.jpg', 'G41.jpg', 'G42.jpg', 'G43.jpg', 'G44.jpg', 'G45.jpg', 'G46.jpg', 'G47.jpg', 'G48.jpg', 'G49.jpg', 'G50.jpg', 'G51.jpg', 'G52.jpg', 'G53.jpg', 'G54.jpg', 'G55.jpg', 'G56.jpg', 'G57.jpg', 'G58.jpg', 'G59.jpg', 'G60.jpg', 'G61.jpg', 'G62.jpg', 'G63.jpg', 'G64.jpg', 'G65.jpg', 'G66.jpg', 'G67.jpg', 'G68.jpg', 'G69.jpg', 'G70.jpg'];
+
+    // define all furniture images
+    var imgsFurniture2ChooseFrom = ['F01.jpg', 'F02.jpg', 'F03.jpg', 'F04.jpg', 'F05.jpg', 'F06.jpg', 'F07.jpg', 'F08.jpg', 'F09.jpg', 'F10.jpg', 'F11.jpg', 'F12.jpg', 'F13.jpg', 'F14.jpg', 'F15.jpg', 'F16.jpg', 'F17.jpg', 'F18.jpg', 'F19.jpg', 'F20.jpg', 'F21.jpg', 'F22.jpg', 'F23.jpg', 'F24.jpg', 'F25.jpg', 'F26.jpg', 'F27.jpg', 'F28.jpg', 'F29.jpg', 'F30.jpg', 'F31.jpg', 'F32.jpg', 'F33.jpg', 'F34.jpg', 'F35.jpg', 'F36.jpg', 'F37.jpg', 'F38.jpg', 'F39.jpg', 'F40.jpg', 'F41.jpg', 'F42.jpg', 'F43.jpg', 'F44.jpg', 'F45.jpg', 'F46.jpg', 'F47.jpg', 'F48.jpg', 'F49.jpg', 'F50.jpg', 'F51.jpg', 'F52.jpg', 'F53.jpg', 'F54.jpg', 'F55.jpg', 'F56.jpg', 'F57.jpg', 'F58.jpg', 'F59.jpg', 'F60.jpg', 'F61.jpg', 'F62.jpg', 'F63.jpg', 'F64.jpg', 'F65.jpg', 'F66.jpg', 'F67.jpg', 'F68.jpg', 'F69.jpg', 'F70.jpg'];
+
+    // define all toys images
+    var imgsToys2ChooseFrom = ['T01.jpg', 'T02.jpg', 'T03.jpg', 'T04.jpg', 'T05.jpg', 'T06.jpg', 'T07.jpg', 'T08.jpg', 'T09.jpg', 'T10.jpg', 'T11.jpg', 'T12.jpg', 'T13.jpg', 'T14.jpg', 'T15.jpg', 'T16.jpg', 'T17.jpg', 'T18.jpg', 'T19.jpg', 'T20.jpg', 'T21.jpg', 'T22.jpg', 'T23.jpg', 'T24.jpg', 'T25.jpg', 'T26.jpg', 'T27.jpg', 'T28.jpg', 'T29.jpg', 'T30.jpg', 'T31.jpg', 'T32.jpg', 'T33.jpg', 'T34.jpg', 'T35.jpg', 'T36.jpg', 'T37.jpg', 'T38.jpg', 'T39.jpg', 'T40.jpg', 'T41.jpg', 'T42.jpg', 'T43.jpg', 'T44.jpg', 'T45.jpg', 'T46.jpg', 'T47.jpg', 'T48.jpg', 'T49.jpg', 'T50.jpg', 'T51.jpg', 'T52.jpg', 'T53.jpg', 'T54.jpg', 'T55.jpg', 'T56.jpg', 'T57.jpg', 'T58.jpg', 'T59.jpg', 'T60.jpg', 'T61.jpg', 'T62.jpg', 'T63.jpg', 'T64.jpg', 'T65.jpg', 'T66.jpg', 'T67.jpg', 'T68.jpg', 'T69.jpg', 'T70.jpg'];
+
+    // from the whole sets of images, select a random subset to use in this session (size=INFO.nImgMasks2Preload, put in right path format)
+    var imgTools = makeImgPath(jsPsych.randomization.sample(imgsTools2ChooseFrom, INFO.nImgPerCategory2Preload));
+    var imgFurniture = makeImgPath(jsPsych.randomization.sample(imgsFurniture2ChooseFrom, INFO.nImgPerCategory2Preload));
+    var imgToys = makeImgPath(jsPsych.randomization.sample(imgsToys2ChooseFrom, INFO.nImgPerCategory2Preload));
+
+    // define all mask images
+    var imgsMasks2ChooseFrom = ['scrp_F01.jpg', 'scrp_F02.jpg', 'scrp_F03.jpg', 'scrp_F04.jpg', 'scrp_F05.jpg', 'scrp_F06.jpg', 'scrp_F07.jpg', 'scrp_F08.jpg', 'scrp_F09.jpg', 'scrp_F10.jpg', 'scrp_F11.jpg', 'scrp_F12.jpg', 'scrp_F13.jpg', 'scrp_F14.jpg', 'scrp_F15.jpg', 'scrp_F16.jpg', 'scrp_F17.jpg', 'scrp_F18.jpg', 'scrp_F19.jpg', 'scrp_F20.jpg', 'scrp_F21.jpg', 'scrp_F22.jpg', 'scrp_F23.jpg', 'scrp_F24.jpg', 'scrp_F25.jpg', 'scrp_F26.jpg', 'scrp_F27.jpg', 'scrp_F28.jpg', 'scrp_F29.jpg', 'scrp_F30.jpg', 'scrp_F31.jpg', 'scrp_F32.jpg', 'scrp_F33.jpg', 'scrp_F34.jpg', 'scrp_F35.jpg', 'scrp_F36.jpg', 'scrp_F37.jpg', 'scrp_F38.jpg', 'scrp_F39.jpg', 'scrp_F40.jpg', 'scrp_F41.jpg', 'scrp_F42.jpg', 'scrp_F43.jpg', 'scrp_F44.jpg', 'scrp_F45.jpg', 'scrp_F46.jpg', 'scrp_F47.jpg', 'scrp_F48.jpg', 'scrp_F49.jpg', 'scrp_F50.jpg', 'scrp_F51.jpg', 'scrp_F52.jpg', 'scrp_F53.jpg', 'scrp_F54.jpg', 'scrp_F55.jpg', 'scrp_F56.jpg', 'scrp_F57.jpg', 'scrp_F58.jpg', 'scrp_F59.jpg', 'scrp_F60.jpg', 'scrp_F61.jpg', 'scrp_F62.jpg', 'scrp_F63.jpg', 'scrp_F64.jpg', 'scrp_F65.jpg', 'scrp_F66.jpg', 'scrp_F67.jpg', 'scrp_F68.jpg', 'scrp_F69.jpg', 'scrp_F70.jpg', 'scrp_G01.jpg', 'scrp_G02.jpg', 'scrp_G03.jpg', 'scrp_G04.jpg', 'scrp_G05.jpg', 'scrp_G06.jpg', 'scrp_G07.jpg', 'scrp_G08.jpg', 'scrp_G09.jpg', 'scrp_G10.jpg', 'scrp_G11.jpg', 'scrp_G12.jpg', 'scrp_G13.jpg', 'scrp_G14.jpg', 'scrp_G15.jpg', 'scrp_G16.jpg', 'scrp_G17.jpg', 'scrp_G18.jpg', 'scrp_G19.jpg', 'scrp_G20.jpg', 'scrp_G21.jpg', 'scrp_G22.jpg', 'scrp_G23.jpg', 'scrp_G24.jpg', 'scrp_G25.jpg', 'scrp_G26.jpg', 'scrp_G27.jpg', 'scrp_G28.jpg', 'scrp_G29.jpg', 'scrp_G30.jpg', 'scrp_G31.jpg', 'scrp_G32.jpg', 'scrp_G33.jpg', 'scrp_G34.jpg', 'scrp_G35.jpg', 'scrp_G36.jpg', 'scrp_G37.jpg', 'scrp_G38.jpg', 'scrp_G39.jpg', 'scrp_G40.jpg', 'scrp_G41.jpg', 'scrp_G42.jpg', 'scrp_G43.jpg', 'scrp_G44.jpg', 'scrp_G45.jpg', 'scrp_G46.jpg', 'scrp_G47.jpg', 'scrp_G48.jpg', 'scrp_G49.jpg', 'scrp_G50.jpg', 'scrp_G51.jpg', 'scrp_G52.jpg', 'scrp_G53.jpg', 'scrp_G54.jpg', 'scrp_G55.jpg', 'scrp_G56.jpg', 'scrp_G57.jpg', 'scrp_G58.jpg', 'scrp_G59.jpg', 'scrp_G60.jpg', 'scrp_G61.jpg', 'scrp_G62.jpg', 'scrp_G63.jpg', 'scrp_G64.jpg', 'scrp_G65.jpg', 'scrp_G66.jpg', 'scrp_G67.jpg', 'scrp_G68.jpg', 'scrp_G69.jpg', 'scrp_G70.jpg', 'scrp_T01.jpg', 'scrp_T02.jpg', 'scrp_T03.jpg', 'scrp_T04.jpg', 'scrp_T05.jpg', 'scrp_T06.jpg', 'scrp_T07.jpg', 'scrp_T08.jpg', 'scrp_T09.jpg', 'scrp_T10.jpg', 'scrp_T11.jpg', 'scrp_T12.jpg', 'scrp_T13.jpg', 'scrp_T14.jpg', 'scrp_T15.jpg', 'scrp_T16.jpg', 'scrp_T17.jpg', 'scrp_T18.jpg', 'scrp_T19.jpg', 'scrp_T20.jpg', 'scrp_T21.jpg', 'scrp_T22.jpg', 'scrp_T23.jpg', 'scrp_T24.jpg', 'scrp_T25.jpg', 'scrp_T26.jpg', 'scrp_T27.jpg', 'scrp_T28.jpg', 'scrp_T29.jpg', 'scrp_T30.jpg', 'scrp_T31.jpg', 'scrp_T32.jpg', 'scrp_T33.jpg', 'scrp_T34.jpg', 'scrp_T35.jpg', 'scrp_T36.jpg', 'scrp_T37.jpg', 'scrp_T38.jpg', 'scrp_T39.jpg', 'scrp_T40.jpg', 'scrp_T41.jpg', 'scrp_T42.jpg', 'scrp_T43.jpg', 'scrp_T44.jpg', 'scrp_T45.jpg', 'scrp_T46.jpg', 'scrp_T47.jpg', 'scrp_T48.jpg', 'scrp_T49.jpg', 'scrp_T50.jpg', 'scrp_T51.jpg', 'scrp_T52.jpg', 'scrp_T53.jpg', 'scrp_T54.jpg', 'scrp_T55.jpg', 'scrp_T56.jpg', 'scrp_T57.jpg', 'scrp_T58.jpg', 'scrp_T59.jpg', 'scrp_T60.jpg', 'scrp_T61.jpg', 'scrp_T62.jpg', 'scrp_T63.jpg', 'scrp_T64.jpg', 'scrp_T65.jpg', 'scrp_T66.jpg', 'scrp_T67.jpg', 'scrp_T68.jpg', 'scrp_T69.jpg', 'scrp_T70.jpg'];
+    // from the whole set of images, select a random subset (size=INFO.nImgMasks2Preload, put in right path format)
+    var imgMasks = makeImgPath(jsPsych.randomization.sample(imgsMasks2ChooseFrom, INFO.nImgMasks2Preload));
+    console.log('imgMasks length: ' + imgMasks.length);
+    //console.log('imgMasks: ' + imgMasks);
+
+    // make a list of all images to preload
+    var img2Preload = imgMasks.slice(0); // clone the masks list
+    var imgCategorical = imgFurniture.concat(imgTools, imgToys); // make a list of the categorical stimuli (those that will be responded to)
+    img2Preload = img2Preload.concat(imgCategorical); // add the categorical images
+    // list of other images to preload
+    var otherImg2Preload = makeImgPath(['icon_play.png','icon_recording.png']);
+    img2Preload = img2Preload.concat(otherImg2Preload); // add the other images
+    console.log('preloading ' + img2Preload.length + ' images');
+
+    // Preload all images into memory at the start of this session (and time how long that took)
+    var t0_4_preload = Date.now(); // get #ms from midnight 1970
+    
+    //var t0_2 = performance.now(); // get time relative to page load again, to see how much time getting time took
+    var preloadDuration;
+    // generate random number to later stitch start and end logfiles of subjects together
+    var randSessionId = Math.floor((Math.random() * 100000) + 1);
+    document.write("<div class=\"jspsych-survey-multi-choice-question\"><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">Loading data, one moment please...</p></div>");
+	jsPsych.pluginAPI.preloadImages(img2Preload, function(){ startExperiment(); }, function(nLoaded) { updateLoadedCount(nLoaded); });
+	
+
+	function getPreloadFails(imgList) {
+		var failedList = [];
+	var image = new Image();
+		for (var iIm = 0;iIm < imgList.length; iIm++) {
+				image.src = imgList[iIm];
+				if (image.complete==false) {failedList.push(imgList[iIm])};
+			};
+		console.log('failed list');
+		console.log(failedList);
+		return failedList;
+	}
+	function updateLoadedCount(nLoaded){
+		var percentcomplete = nLoaded / img2Preload.length * 100;
+			
+		// could put something fancier here, like a progress bar
+		// or updating text in the DOM.
+		//console.log('preloaded '+img2Preload[nLoaded]);
+		if (percentcomplete == 100) {
+			// fin out which images failed to load
+			var failed2load = getPreloadFails(img2Preload);
+		
+			preloadDuration = Math.round(Date.now()-t0_4_preload.now); // determine how long it took to load
+			console.log('Preloaded all '+nLoaded+' images in '+preloadDuration+' msec. #fails: '+failed2load.length);
+			console.log('After preload subject info:');
+			console.log(subjInfo);
+		};
+	}
+
+    // record the condition assignment in the jsPsych data
+    // this adds a property called 'subject' and a property called 'condition' to every trial
+   	var t0_researcher_start;
+	var t0Date;
+	var t0;
+	console.log('160: t0_4_preload: '+t0_4_preload);
+	//determine session type from info read from file
+/*	if (subjInfo != undefined) {
+		if (subjInfo[0].next_session==0) {
+			currSession = "practice";
+		} else if (subjInfo[0].session_order[subjInfo[0].next_session-1]=='H') {
+			currSession='Hard'
+		} else {
+			currSession='Easy'
+		};
+		console.log("currSession = "+currSession);
+	}*/
+
+    jsPsych.data.addProperties({
+        subject: subjectCode,
+        session: currSession,
+        session_order_nr: function () {if (subjInfo!=undefined) {return subjInfo[0].next_session} else {return undefined};},
+        session_id: randSessionId,
+        t0_pageload: t0_4_preload,
+        task_version: INFO.task_version,
+    });
+	
+    /* =============== Create Trial Blocks =============== */
+    /* define test block. On easy days, there will be 80/20 easy trials,
+    on difficult days this ratio will be 20/80.
+    Structure: each experimental meal consists of several blocks of (5?) trials.
+    Before each block, the images for that block are preloaded.
+    Each trial consists of several subtrials, each starting with an instruction
+    screen, followed by  */
+
+    var easyFactors = {
+        response_category: ['Tools', 'Kids toys', 'Furniture'],
+        dur_stimulus: [750], // stimulus presentation duration (msec)
+        dur_mask: [750], // mask presentation duration (msec)
+        trial_difficulty: ['easy']
+    };
+    var hardFactors = {
+        response_category: ['Tools', 'Kids toys', 'Furniture'],
+        dur_stimulus: [100], // stimulus presentation duration (msec)
+        dur_mask: [650], // mask presentation duration (msec)
+		trial_difficulty: ['hard']
+    };
+
+    // create lists of the easy and hard trials from the listed factors
+    var easyTrials = jsPsych.randomization.factorial(easyFactors, 1);
+    var hardTrials = jsPsych.randomization.factorial(hardFactors, 1);
+    //console.log(INFO.trialDuration);
+    //console.log('easyTrials');
+    //console.log(easyTrials);
+    //console.log(easyTrials[0].dur_stumulus);
+    var easyTrialNSubtrials = Math.ceil(INFO.trialDuration/(easyTrials[0].dur_stimulus + easyTrials[0].dur_mask));
+    var hardTrialNSubtrials = Math.ceil(INFO.trialDuration/(hardTrials[0].dur_stimulus + hardTrials[0].dur_mask));
+    console.log('# subtrials easy trials: '+easyTrialNSubtrials+'. # subtrials hard trials: '+hardTrialNSubtrials);
+	var currEasyTrials;
+	var currHardTrials;
+	
+    // generate the blocks
+    trialBlocks = [];
+    var blockOffset = 0;
+    if (currSession=="practice"){ // 	practice sessions
+			// start with easy trials
+			currEasyTrials = jsPsych.randomization.repeat(easyTrials, Math.ceil((INFO.nPracticeTrials/2) / easyTrials.length)).slice(0, INFO.nPracticeTrials/2);
+			currHardTrials = jsPsych.randomization.repeat(hardTrials, Math.ceil((INFO.nPracticeTrials/2) / hardTrials.length)).slice(0, INFO.nPracticeTrials/2);
+			trialBlocks[0] = jsPsych.randomization.repeat(currEasyTrials.concat(currHardTrials), 1);			
+			// fill the trials in the practice block
+			currNSubtrials = easyTrialNSubtrials;
+			for (var iTrial = 0;iTrial < trialBlocks[blockOffset].length; iTrial++) {
+				trialBlocks[blockOffset][iTrial].subTrialStimuli = jsPsych.randomization.sample(imgCategorical,currNSubtrials,false);
+				trialBlocks[blockOffset][iTrial].subTrialMasks = jsPsych.randomization.sample(imgMasks,currNSubtrials,false);
+				trialBlocks[blockOffset][iTrial].subTrialResponseRequired = responseRequired(trialBlocks[blockOffset][iTrial].subTrialStimuli,trialBlocks[blockOffset][iTrial].response_category);
+			};
+		   // fill the trials in each block with subtrials
+        for (var iTrial = 0;iTrial < trialBlocks[0].length; iTrial++) {
+        	if (trialBlocks[0][iTrial].trial_difficulty == 'easy') {
+				currNSubtrials = easyTrialNSubtrials;} else {
+				currNSubtrials = hardTrialNSubtrials;};
+				
+			// clone trial (to break reference link with other trials
+			trialBlocks[0][iTrial] = $.extend(true,{},trialBlocks[0][iTrial]);
+			// fill subtrials with random subsets of preloaded images
+			trialBlocks[0][iTrial].subTrialStimuli = jsPsych.randomization.sample(imgCategorical,currNSubtrials,false);
+			trialBlocks[0][iTrial].subTrialMasks = jsPsych.randomization.sample(imgMasks,currNSubtrials,false);
+			trialBlocks[0][iTrial].subTrialResponseRequired = responseRequired(trialBlocks[0][iTrial].subTrialStimuli,trialBlocks[0][iTrial].response_category);
+			//console.log('trials in practice session block ('+trialBlocks[0][iTrial].trial_difficulty+'), trial '+iTrial+' (looking for #'+currNSubtrials+' subtrials out of '+imgCategorical.length+')');
+			//console.log(trialBlocks[0][iTrial]);			
+        };	
+    } else { 	// no practice session
+	
+		for (var iBlock = blockOffset; iBlock < INFO.nBlocks+blockOffset; iBlock++) {
+			// fill each block with the right amount of trials and shuffle the order
+			if (currSession == 'easy') { // easy session
+				currEasyTrials = jsPsych.randomization.repeat(easyTrials, Math.ceil(INFO.nHighFreqTrialsPerBlock / easyTrials.length)).slice(0, INFO.nHighFreqTrialsPerBlock);
+				currHardTrials = jsPsych.randomization.repeat(hardTrials, Math.ceil(INFO.nLowFreqTrialsPerBlock / hardTrials.length)).slice(0, INFO.nLowFreqTrialsPerBlock);
+				trialBlocks[iBlock] = jsPsych.randomization.repeat(currEasyTrials.concat(currHardTrials), 1);			
+				//console.log('easy: trialBlocks[iBlock]');
+				//console.log([trialBlocks[iBlock]]);
+
+			} else { // hard session
+				currHardTrials = jsPsych.randomization.repeat(hardTrials, Math.ceil(INFO.nHighFreqTrialsPerBlock / hardTrials.length)).slice(0, INFO.nHighFreqTrialsPerBlock);
+				currEasyTrials = jsPsych.randomization.repeat(easyTrials, Math.ceil(INFO.nLowFreqTrialsPerBlock / easyTrials.length)).slice(0, INFO.nLowFreqTrialsPerBlock);
+				trialBlocks[iBlock] = jsPsych.randomization.repeat(currEasyTrials.concat(currHardTrials), 1);
+				//console.log('hard: trialBlocks[iBlock]');
+				//console.log([trialBlocks[iBlock]]);
+			};
+			
+			// fill the trials in each block with subtrials
+			for (var iTrial = 0;iTrial < trialBlocks[iBlock].length; iTrial++) {
+				if (trialBlocks[iBlock][iTrial].trial_difficulty == 'easy') {
+					currNSubtrials = easyTrialNSubtrials;} else {
+					currNSubtrials = hardTrialNSubtrials;};
+				
+				// clone trial (to break reference link with other trials
+				trialBlocks[iBlock][iTrial] = $.extend(true,{},trialBlocks[iBlock][iTrial]);
+				// fill subtrials with random subsets of preloaded images
+				trialBlocks[iBlock][iTrial].subTrialStimuli = jsPsych.randomization.sample(imgCategorical,currNSubtrials,false);
+				trialBlocks[iBlock][iTrial].subTrialMasks = jsPsych.randomization.sample(imgMasks,currNSubtrials,false);
+				trialBlocks[iBlock][iTrial].subTrialResponseRequired = responseRequired(trialBlocks[iBlock][iTrial].subTrialStimuli,trialBlocks[iBlock][iTrial].response_category);
+				console.log('trials in block '+iBlock+' ('+trialBlocks[iBlock][iTrial].trial_difficulty+'), trial '+iTrial+' (looking for #'+currNSubtrials+' subtrials out of '+imgCategorical.length+')');
+				console.log(trialBlocks[iBlock][iTrial]);			
+			};
+		}			
+    }
+       
+    //console.log(easyTrials);
+    //console.log(hardTrials);
+    //console.log(INFO);
+    console.log('trial blocks in current session: '+currSession);
+    console.log(trialBlocks);
+	
+	var timeline = []; // initialise (expanded) trial structure 
+	fillTimeline();
+	
+	// function that fills the timeline (after subject info is read from file)
+	function fillTimeline() {
+		if (subjectCode == null) {
+			// if no subject ID was given in the URL, we should ask for that info
+			var subjectIdScreen = {
+			  type: 'survey-text',
+			  preamble: 'No subject details obtained, please enter subject number',
+			  questions: ["Enter subject code","Enter session type"],
+			  on_finish: function (data) {
+				var responses = JSON.parse(data.responses);
+				if (jsPsych.data.subject == null) {
+					subjectCode = responses.Q0;
+					jsPsych.data.subject = subjectCode;
+					currSession = responses.Q1;
+					console.log('updated subject code to '+jsPsych.data.subject);
+				}
+				console.log('Subject info after subj id screen:');
+				console.log(subjInfo);
+				console.log("timeline length before insertion= "+timeline.length());
+				timeline.push('bla');
+				console.log("timeline length after insertion= "+timeline.length());			
+			  }
+			};
+			timeline.push(subjectIdScreen);
+		} else {
+			// Welcome screen
+			var openingScreen = {
+				type: 'button-response',
+				stimulus: '',
+				choices: ['Next'],
+				prompt: function() {
+					var return_str;
+					if (currSession == "practice") {
+						return_str = "<p>Welcome to this experiment! In this experiment, you will respond to images as fast as possible, while you are eating. Every day, this will take about 20 minutes.</p><p>Press next to continue</p>"}
+						else {return_str="<p>Good morning and welcome back to this experiment!</p><p>Press next to continue</p>"};
+						return return_str;},
+				button_html: "<a class='jspsych-btn'>%choice%</a>",
+				on_finish: function (data) {
+					if (data.button_pressed==0) {consentForSave = true;}
+					console.log('consent given: '+consentForSave);    	
+				}
+			};
+			timeline.push(openingScreen);		
+		}
+
+		if (INFO.displayTimeTriggers==true) {
+			// make initial screen one with play button, to wait for researcher to start experiment
+			var waitForStartScreen = {
+				type: 'button-response',
+				stimulus: "img/icon_play.png",
+				choices: ['Next'],
+				prompt: "",
+				button_html: "<a class='jspsych-btn'>%choice%</a>",
+				on_finish: function (data) {
+					// record time of start press (relative to page load) and in terms of date
+					t0Date = new Date(); 	// date of start press by researcher
+					t0_researcher_start = t0Date - jsPsych.startTime(); 	// start press by researcher relative to experiment T0
+					t0 = t0Date - sessionStartTime;//jsPsych.totalTime(), //performance.now();
+					var t0DateStr = t0Date.toISOString();  	
+				}
+			};
+			timeline.push(waitForStartScreen);
+	
+			var showStartedScreen = {
+				type: 'single-stim',
+				stimulus: 'img/icon_recording.png',	
+				timing_stim: 5000,
+				timing_response: 5000,
+				response_ends_trial: false,
+				prompt: 'recording started',
+			};
+			timeline.push(showStartedScreen);
+
+			var showTimeScreen = {
+				type: 'single-stim-showtime',
+				reference_time: t0, // use the experimental Go time as a reference
+				timing_stim: 2000,
+				timing_response: 2000,
+				stimulus: img2Preload[1],
+			};
+			timeline.push(showTimeScreen);
+			/*timeline.push(showTimeScreen);
+			timeline.push(showTimeScreen);
+			timeline.push(showTimeScreen);*/
+		};
+		
+		var clickableInstructions = {
+			type: 'instructions',
+			pages: function () {
+				if (currSession!="practice") { 	// for non-practice sessions
+					return ['<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">This is a short recap of the instructions</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">In this experiment, your responsiveness during eating will be put to the test.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">During this experiment, images will be presented of different categories: Kids toys, Tools and Furniture.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Before a trial starts you will be instructed to which category of image you should respond.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">If you see an image of that category you have to respond as fast as possible by tapping the screen.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to continue.</p></div>',"<div class=\"jspsych-survey-multi-choice-question\"><p>Because the goal of the experiment is to investigate what the effect is of eating on task performance, you will eat during the experimental trials.</p><p>Please eat your breakfast at a normal eating pace throughout the task.</p><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">Good luck!</p><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">Press Next to start the experiment.</p></div>"]
+				} else { 	// for practice sessions
+					return['<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">In this experiment, your responsiveness during eating will be put to the test.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">During this experiment, images will be presented of different categories: Kids toys, Tools and Furniture.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Before a trial starts you will be instructed to which category of image you should respond.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">If you see an image of that category you have to respond as fast as possible by tapping the screen.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to continue.</p></div>',
+				  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Sometimes, the images will follow each other quickly, sometimes this will go slower.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">If three arrows are presented ( >>> ) with the category instruction, this means that this is a FAST trial.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">If only one arrow  ( > ) is presented this means this will be a SLOW trial.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to continue.</p></div>',
+				  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Before the experiment really starts, you will briefly practice the task.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Please do not start eating during these practice trials.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Click Next to start the practice trials. Afterwards, you will receive feedback on how well you performed.</p></div>',
+			]}},
+			show_clickable_nav: true,
+			data: function (){
+				var instructions_data = {preloadDuration: preloadDuration,platform: platform.description,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
+				if (INFO.getIP == true) {
+					if (IPinfo.hasOwnProperty('responseJSON')) {
+						if (IPinfo.responseJSON.hasOwnProperty('city')) {
+							instructions_data.city = IPinfo.responseJSON.city;
+							instructions_data.ip = IPinfo.responseJSON.ip;
+						}
+					}
+				}
+				return instructions_data	
+			},
+
+			on_finish: function () {
+				jsPsych.data.addProperties({
+					t0_jspsych_date: (jsPsych.startTime()).toISOString(),
+					t0_jspsych: jsPsych.startTime(),
+					});
+				saveData('start'); 
+				console.log('experiment start time: '+jsPsych.startTime());
+
+			},
+
+		}
+		timeline.push(clickableInstructions);
+	
+		var nextTimelineTrial;
+		/*// create a practice block
+	timeline.push(createTrialInstructions('Toys','easy'));
+		for (var iSubTrial = 0; iSubTrial < currTrial.subTrialStimuli.length; iSubTrial++) {
+			
+		};*/
+
+		// expand trial list into separate subtrials
+		var currTrial;
+		for (var iBlock = 0; iBlock < trialBlocks.length; iBlock++) {
+			for (var iTrial = 0;iTrial < trialBlocks[iBlock].length; iTrial++) {
+				// each trial starts with response instructions
+				currTrial = trialBlocks[iBlock][iTrial];	
+				//console.log('block '+iBlock+' trial '+iTrial);
+				console.log(currTrial);				timeline.push(createTrialInstructions(currTrial.response_category,currTrial.trial_difficulty,iBlock));
+				// fill the list with the current subtrials
+				for (var iSubTrial = 0; iSubTrial < currTrial.subTrialStimuli.length; iSubTrial++) {
+					nextTimelineTrial = {
+						type: "visdet",
+						stimulus: currTrial.subTrialStimuli[iSubTrial],
+						mask: currTrial.subTrialMasks[iSubTrial],
+						choices: ['F'], // do we need this?
+						response_ends_trial: false, // should a trial be terminated upon response?
+						cont_key: 'mouse',
+						timing_stim: currTrial.dur_stimulus, // display 
+						timing_response: currTrial.dur_stimulus + currTrial.dur_mask,
+						timing_post_trial: 0,
+					
+						data: {
+							mask: currTrial.subTrialMasks[iSubTrial],
+							dur_stimulus: currTrial.dur_stimulus,
+							dur_mask: currTrial.dur_mask,
+							dur_time2respond: currTrial.dur_stimulus + currTrial.dur_mask,
+							response_required: currTrial.subTrialResponseRequired[iSubTrial],
+							response_category: currTrial.response_category,
+							trial_difficulty: currTrial.trial_difficulty,
+							trial_startdate: currTrial.start_date,
+							trial_enddate: currTrial.end_date,
+						},
+					
+						// on finishing each stimulus, determine the correctness of the response
+						on_finish: function(data) {
+							var correct = 'undefined';
+							if (data.response_required == true && data.rt > -1) {
+								correct = 'hit';
+							} else if (data.response_required == true && data.rt == -1) {
+								correct = 'miss';
+							} else if (data.response_required == false && data.rt > -1) {							
+								correct = 'false alarm';
+							} else {
+								correct = 'correct rejection';
+							}
+							//console.log('trial response was: '+correct);
+							jsPsych.data.addDataToLastTrial({correct: correct});
+						}
+					}
+					//console.log('nextTimelineTrial');
+					//console.log(nextTimelineTrial);
+					timeline.push(nextTimelineTrial);
+				}
+			}
+			if (currSession=="practice") {
+				// after the practice block, give the user feedback
+				var practiceBlockFeedback = {
+					type: 'instructions',
+					show_clickable_nav: true,
+					pages: function() {
+						var subject_data = getSubjectData();
+						var return_str = ["<div class=\"jspsych-survey-multi-choice-question\"><p  class=\"jspsych-survey-multi-choice-text survey-multi-choice\">This is how you performed during the practice:</p><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">You have responded  "+(subject_data.easy_count_hit+subject_data.easy_count_false_alarm+subject_data.hard_count_hit+subject_data.hard_count_false_alarm)+" times, of which "+(subject_data.easy_count_false_alarm+subject_data.hard_count_false_alarm)+" responses were false alarms (you should not have).<br>You have missed "+(subject_data.easy_count_miss+subject_data.hard_count_miss)+" images to which you should have responded.</p><p>Click Next to continue.</p></div>"];
+						return return_str;
+					},
+				};
+				timeline.push(practiceBlockFeedback);
+				} else {
+				// Another screen for non-practice trials could go here
+			};
+		}
+		console.log('expanded trials, there are now ' + timeline.length + ' trials in the timeline');
+	};
+
+	//console.log(timeline);
+				
+	// ask the subject some questions about the experiment
+	// defining groups of questions that will go together.
+	var page_1_questions = ["U bent nu klaar met de experimentele <i>trials</i>! Nu volgen nog enkele vragen over de taak<br>Hoe moeilijk vond u de langzame (>) <i>trials</i>?", "Hoe moeilijk vond u de snelle (>>>) <i>trials</i>?"]
+
+	// definiting two different response scales that can be used.
+	var Q1_options = ["Erg makkelijk", "Een beetje makkelijk", "Makkelijk noch moeilijk", "Een beetje moeilijk", "Erg moeilijk"];
+	var Q2_options = ["Erg makkelijk", "Een beetje makkelijk", "Makkelijk noch moeilijk", "Een beetje moeilijk", "Erg moeilijk"];
+
+	var multi_choice_page = {
+	  type: 'survey-multi-choice',
+	  questions: page_1_questions,
+	  options: [Q1_options, Q2_options],  // need one scale for every question on a page
+	  required: [true, true]   // set whether questions are required
+	  // horizontal: true  // centres questions and makes options display horizontally
+	};	
+	
+	page_1_questions = ["Denkt u dat de taak moeilijker was omdat u tegelijkertijd aan het eten was?", "Bent u man of vrouw?","Hoe oud bent u?"];
+
+	var survey_page = {
+	  type: 'survey-text',
+	  questions: page_1_questions,
+        data: function() {
+        	var sessionEndTime = new Date().getTime();
+			var survey_page_data = {preloadDuration: preloadDuration,time2CompleteExperiment: sessionEndTime-sessionStartTime,timeAtCompletion: (new Date()).toISOString(),
+city:'undefined city',ip:'undefined IP'};
+        	/* At this final screen before writing the data to disk, see if the IPinfo promise (javascript term) has returned the IP info. If so, save it to this trial's data */
+
+			if (INFO.getIP == true) {
+				if (IPinfo.hasOwnProperty('responseJSON')) {
+					if (IPinfo.responseJSON.hasOwnProperty('city')) {
+						survey_page_data.city = IPinfo.responseJSON.city;
+						survey_page_data.ip = IPinfo.responseJSON.ip;
+					}
+				}
+			}
+			return survey_page_data
+		}
+	};	
+	//timeline.push(multi_choice_page);
+	//timeline.push(survey_page);
+	
+    // function to create instruction screen at the start of trials
+	function createTrialInstructions(category,difficulty,blocknr) {
+		var speedIndicator;
+		switch (difficulty) {
+			case 'easy': speedIndicator = '>'; break;
+			case 'hard': speedIndicator = '>>>'; break;				 
+		};
+		var instruct_trial = {
+			type: 'single-stim', //using single-stim instead of text so that the delay can be for a fixed period of time
+				stimulus: function () {
+				if (Math.round(Math.random())==1 & blocknr > 0) { // in 50% of trials, remind people to eat as normal
+					 var eatReminderStr = "<p><h6>Remember to eat normally during the trials</h6></p>"} else { var eatReminderStr = ""; };
+					 return "<p><h2>"+category+"</h2></p><p><h2>"+speedIndicator+"</h2></p>"+eatReminderStr},
+			timing_response: INFO.categoryInstructDuration, // time to present instructions
+			choices: 'none', // no keys are allowed to advance
+			is_html: true
+		}
+		return instruct_trial;
+	}
+	
+	// function to obtain subject performance metrics
+    function getSubjectData() {
+
+        var trials = jsPsych.data.getTrialsOfType('visdet');
+        console.log('there were '+trials.length + ' trials');
+
+        var easy_count_hit = 0;
+		var easy_count_miss = 0;
+		var easy_count_false_alarm = 0;
+		var easy_count_correct_rejection = 0;
+        var hard_count_hit = 0;
+		var hard_count_miss = 0;
+		var hard_count_false_alarm = 0;
+		var hard_count_correct_rejection = 0;
+		
+      
+        for (var i = 0; i < trials.length; i++) {
+            switch (trials[i].trial_difficulty) {
+            	case 'easy':
+            		switch (trials[i].correct) {
+            			case 'hit':
+            				easy_count_hit++; break;
+            			case 'miss':
+							easy_count_miss++; break;
+            			case 'correct rejection':
+							easy_count_correct_rejection++; break;
+            			case 'false alarm':
+							easy_count_false_alarm++; break;
+					}; break;            			
+				case 'hard':
+            		switch (trials[i].correct) {
+            			case 'hit':
+            				hard_count_hit++; break;
+            			case 'miss':
+							hard_count_miss++; break;
+            			case 'correct rejection':
+							hard_count_correct_rejection++; break;
+            			case 'false alarm':
+							hard_count_false_alarm++; break;
+					}; break;          			
+			}
+			//console.log('loop '+i);
+			console.log(easy_count_hit + ',' + easy_count_miss + ',' + easy_count_false_alarm);
+		}
+		var easy_hitrate = easy_count_hit / (easy_count_hit+easy_count_miss);
+		var easy_false_alarm_rate = easy_count_false_alarm / (easy_count_false_alarm+easy_count_correct_rejection);
+		var hard_hitrate = hard_count_hit / (hard_count_hit+hard_count_miss);
+		var hard_false_alarm_rate = hard_count_false_alarm / (hard_count_false_alarm+hard_count_correct_rejection);
+		
+        var dprime_easy = dprime(easy_hitrate,easy_false_alarm_rate);
+        var dprime_hard = dprime(hard_hitrate,hard_false_alarm_rate);
+        
+        return {
+        	easy_count_hit: easy_count_hit,
+        	easy_count_miss: easy_count_miss,
+        	easy_count_correct_rejection: easy_count_correct_rejection,
+        	easy_count_false_alarm: easy_count_false_alarm,
+        	hard_count_hit: hard_count_hit,
+        	hard_count_miss: hard_count_miss,
+        	hard_count_correct_rejection: hard_count_correct_rejection,
+        	hard_count_false_alarm: hard_count_false_alarm,
+        	dprime_easy: dprime_easy,
+        	dprime_hard: dprime_hard
+            //rt: Math.floor(sum_rt / correct_rt_count),
+            //accuracy: Math.floor(correct_trial_count / trials.length * 100)
+        }
+    }
+
+	// present feedback at the end of the experiment
+    var debrief_block = {
+		type: 'instructions',
+		show_clickable_nav: true,
+		pages: [function() {
+            var subject_data = getSubjectData();
+
+            //console.log(subject_data);
+            
+            /*var survey_responses_str = "";
+            for (var i = 0; i < survey_trials.length; i++) {
+                  survey_responses_str += i + ": " + survey_trials[i].response + " "
+                  }*/
+			// add timing of the experiment just before saving
+			jsPsych.data.addProperties({
+				t0_researcher_pageload: t0,
+				t0_researcher_date: t0Date,
+				t0_researcher_start: t0_researcher_start,
+				//subject_data: subject_data,
+			});
+            // save data to disk before feedback is given
+            saveData('end');
+            updateSubjectSessionFileOnDisk();
+            var return_str;
+            if (currSession=="practice") {
+				return_str = "<div class=\"jspsych-survey-multi-choice-question\"><p>This is the end of the practice of experiment.</p><p>Please call the researcher</p></div>";
+            } else {
+				return_str = "<div class=\"jspsych-survey-multi-choice-question\"><p>This is the end of today's experimental trials.</p><p>Your data has been saved. Please go back to the MetricWire app and fill out the \'Breakfast end\' questions</p></div>";
+            };
+            
+			return return_str;
+        }],
+    };
+    timeline.push(debrief_block);
+    
+    if (INFO.displayTimeTriggers==true) {
+		// put timing feedback for video at the end of the experiment
+		var videoTimingEnd = {
+			type: 'instructions',
+			show_clickable_nav: true,
+			pages: ["<div class=\"jspsych-survey-multi-choice-question\"><p>Researcher, press Next to start the final timing screens. Make sure the video recorder can see the device as the times are displayed.</p></div>"]				
+		};
+		timeline.push(videoTimingEnd);    
+	
+		var nTimeScreensAtEnd = 1;
+		for (var iTSAE=0;iTSAE<nTimeScreensAtEnd;iTSAE++) {
+			timeline.push(showTimeScreen);
+		}
+	};
+
+	// d' calculator
+	function dprime(hitRate,falseAlarmRate) {
+		zHit = InvNormApprox( hitRate );
+		zFA = InvNormApprox( falseAlarmRate );
+		return Math.round((zHit - zFA)*100)/100; // round the dprime to two decimal places
+	}
+	
+	 /*     Converted from a basic routine provided by:
+	 *      Brophy, A. L. (1986).  Alternatives to a table of criterion 
+	 *         values in signal detection theory.  Behavior Research 
+	 *         Methods, Instruments, & Computers, 18, 285-286.
+	 * 		copied from https://memory.psych.mun.ca/models/dprime/  */
+	function InvNormApprox( ina_p ) {
+
+		var	ina_z;
+		var	ina_r;
+		var	ina_k;
+
+		ina_k = -1;
+		if ( ina_p > 0.5 ) {
+			ina_p = 1 - ina_p;
+			ina_k = 1;
+		}
+
+		if ( ina_p < .00001 ) {
+			ina_z = 4.3;
+			ina_z = ina_z * ina_k;
+			return( ina_z );
+		}
+
+		ina_r = Math.sqrt(- (Math.log(ina_p)));
+		ina_z = (((2.321213*ina_r+4.850141)*ina_r-2.297965)*ina_r-2.787189)/((1.637068*ina_r+3.543889)*ina_r+1);
+
+		ina_z = ina_z * ina_k;
+		return( ina_z );
+	}
+	
+	// data parameter should be either the value of jsPsych.data()
+	// or the parameter that is passed to the on_data_update callback function for the core library
+	// jsPsych.data() contains ALL data
+	// the callback function will contain only the most recently written data.
+	function writeDataMySQL(subj_id_str,nowString,sessionPhaseStr){
+	
+	   var data_table = "OP3_test"; // change this for different experiments
+	   $.ajax({
+		  type:'post',
+		  cache: false,
+		  url: 'savedata_mysql.php', //'jspsych-5.0.3/php/savedata_mysql.php', // change this to point to your php file.
+		  // opt_data is to add additional values to every row, like a subject ID
+		  // replace 'key' with the column name, and 'value' with the value.
+		  data: {
+			  table: data_table,
+			  json: JSON.stringify(jsPsych.data),
+			  // change the opt_data line to include any data you want to append to the table, such as a subject ID (or remove this line entirely if you have no additional data)
+			  opt_data: {
+				subj_idx: subj_id_str,
+				saveDate: this.nowString,
+				sessionPhase: this.sessionPhaseStr,
+			}
+		  },
+		  success: function(output) { console.log('MySQL data write success:'); console.log(output); } // write the result to javascript console
+	   });
+	}				
+
+    // Function to save experimental data to a CSV file
+    function writeDataCSV(filename, filedata) {
+        $.ajax({
+            type: 'post',
+            cache: false,
+            url: 'save_data_csv.php', // this is the path to the PHP script
+            data: {
+                filename: filename,
+                filedata: filedata
+            }
+        });
+    }
+
+    // function that returns URL paths for images (in 'img/')
+    function makeImgPath(inputImgs) {
+        var imgPaths = [];
+        for (var i = 0; i < inputImgs.length; i++) {
+            imgPaths.push('img/' + inputImgs[i]);
+        };
+        return imgPaths;
+    }
+    
+    
+    // function that deteremines for each subtrial whether people should respond or not
+    function responseRequired(inputImgs,inputCategory) {
+    	var respReq = [];
+    	var respLetter;
+    	for (var iImage = 0; iImage < inputImgs.length; iImage++) {
+    		switch (inputCategory) {
+    			case 'Tools': respLetter = 'G'; break;
+    			case 'Kids toys': respLetter = 'T'; break;
+    			case 'Furniture': respLetter = 'F'; break;
+    		};
+    		respReq.push(inputImgs[iImage][INFO.respLetterLocation]==respLetter);
+    	};
+    	return respReq;
+    };
+    
+    // function that reads subject info from JSON file
+	function readSubjectInfo(subjectCode) {
+		var subjectInfo = [];
+		// load json without caching
+		var nonCacheableURL = 'data/'+subjectCode+'.json?nocache=' + (new   
+			Date()).getTime();
+			console.log('reading from '+nonCacheableURL);
+		$.getJSON(nonCacheableURL, function(json) {
+			for (var i=0; i<json.length; i++) {
+				subjectInfo[i] = json[i];
+			}
+		});
+		return subjectInfo;
+	}
+
+	function updateSubjectSessionFileOnDisk() {
+		// update subject JSON session info
+		if (subjInfo!=undefined){
+				if (subjInfo.length>0){
+				subjInfo[0].next_session++;
+				subjInfo[0].last_session_date = (new Date()).toString();
+				var subjInfoURL = 'data/'+subjectCode+'.json';
+				console.log('writing to '+subjInfoURL);
+				console.log(JSON.stringify(subjInfo[0]));
+				writeDataCSV(subjInfoURL,JSON.stringify(subjInfo[0]));
+			}
+		}
+	}
+
+	// function that writes subject data to disk
+    function saveData(sessionPhaseStr) {
+        // generate a unique filename for this subject / time combination
+        var now = new Date();
+        nowString = now.getFullYear() + '-' +
+            ('0' + (now.getMonth() + 1)).slice(-2) + '-' +
+            ('0' + now.getDate()).slice(-2) +
+            '_' + randSessionId + '_' + sessionPhaseStr + '_'
+            +('0' + now.getHours()).slice(-2) + 'h' +
+            ('0' + now.getMinutes()).slice(-2);
+
+        var subj_id_str = subjectCode;
+        /*if (jsPsych.data.subject == null) {
+            // in case we the subject ID was not given in the URL, we fill in the IP address. If obtaining that didn't succeed, the subject name will be 'noID'
+            subj_id_str = 'noID'; //+Math.floor(Math.random()*100000).toISOString();
+			if (INFO.getIP == true) {
+				if (IPinfo.hasOwnProperty('responseJSON')) {
+					if (IPinfo.responseJSON.hasOwnProperty('city')) {
+						subj_id_str = 'IP'+IPinfo.responseJSON.ip;
+					}
+				}
+			}
+        } else {
+            subj_id_str = jsPsych.data.subject;
+        };*/
+
+        // filename of the CSV file is a combination of the (random) subject ID and date string
+        if (INFO.saveMethod == 'mysql') {
+			console.log('Saving data to MySQL: '+subj_id_str+' & '+nowString+' & '+sessionPhaseStr);
+			writeDataMySQL(subj_id_str,nowString,sessionPhaseStr)
+		} else {
+			var savePath = subj_id_str + '_' + nowString + '.csv';
+			console.log('Saving to CSV file: ' + savePath);
+			writeDataCSV(savePath, jsPsych.data.dataAsCSV());
+        }
+    }
+
+    /* start the experiment */
+    startExperiment;
+	function startExperiment(){    
+		jsPsych.init({
+			timeline: timeline,
+			// save data to disk at end of experiment. Note: 'data/' will be prepended automatically before the filename when saveData is called
+			//    on_finish: present feedback
+			on_finish: function() {
+			  //jsPsych.data.displayData();
+			}			
+		});
+    }
+    
+</script>
+
+</html>
