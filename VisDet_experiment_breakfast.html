@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Visual detection experiment</title>
+    <title>Breakfast experiment</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
     <script src="jspsych-5.0.3/jspsych.js"></script>
     <script src="jspsych-5.0.3/plugins/jspsych-text.js"></script>
@@ -31,31 +31,40 @@
     /* =============== Experiment Preferences & Stimuli =============== */
     // get variables from URL or set defaults
 	var subjectCode = jsPsych.data.getURLVariable('subject') || "sub999";
-	currSession =  jsPsych.data.getURLVariable('session') || "practice";
-	subjectCode = subjectCode.toLowerCase();
-	currSession = currSession.toLowerCase();
 	console.log('SubjectCode '+subjectCode+', currSession '+currSession);
-	
 	// read subject info from file
 	var subjInfo = readSubjectInfo(subjectCode);
+	var currSession;
+	if (subjInfo != undefined) { 	// checks to make sure subjInfo is of expected format
+		if (subjInfo.length>0) {
+			if (subjInfo[0].next_session==0) {currSession = 'practice';}
+			else if (subjInfo[0].session_order[subjInfo[0].next_session-1]=='E') {currSession = 'easy'}
+			else if (subjInfo[0].session_order[subjInfo[0].next_session-1]=='H') {currSession = 'hard'}
+			console.log('Based on JSON subjInfo, this is session '+subjInfo[0].next_session+' with diffidculty '+currSession);
+		}
+	}
+	currSession =  currSession || 'practice'; 	// in case no match was found, default to practice session
+	subjectCode = subjectCode.toLowerCase();
+	currSession = currSession.toLowerCase();
+
 	//console.log('JSON subject info for subject: '+subjectCode);
 	//console.log(subjInfo);
 	
     // INFO structure with experiment preferences
     var INFO = {
         nBlocks: 1,
-        nLowFreqTrialsPerBlock: 13, // for 19.5 minutes
-        nHighFreqTrialsPerBlock: 52, // for 19.5 minutes
+        nLowFreqTrialsPerBlock: 1, //13, // for 19.5 minutes
+        nHighFreqTrialsPerBlock: 1, //52, // for 19.5 minutes
         trialDuration: 15000,	// duration of each trial (msec)
         categoryInstructDuration: 3000,	// duration of category instruction (msec) at start trials
         nImgMasks2Preload: 30,
         nImgPerCategory2Preload: 15,
-        nPracticeTrials: 2,
+        nPracticeTrials: 10,
 		saveMethod: 'csv',
 		getIP: false, 	// should we check IP address? (warning:seems to trigger ad blockers )
 		displayTimeTriggers: false, 	// controls whether internal time (of phone/pc) is shown on the screen at the start and end of experiment, used as time triggers to synchronise (only necessary when doing task in the lab)
         respLetterLocation: 4,  // obsolete? location of category letter (for img/G35.jpg    
-        task_version: 1.0, 	// version number of task
+        task_version: 1.01, 	// version number of task
 	};
     //console.log(INFO);
 
@@ -81,17 +90,6 @@
 			};
 		});
 		return JSONout;
-/*		console.log('JSON info:');
-		console.log(JSONout);
-		console.log('JSONdata:');
-		console.log(JSONdata);
-		console.log(Object.getOwnPropertyNames(JSONout));
-		console.log(JSONout.getAllResponseHeaders);
-		console.log(JSONout.responseJSON.city);
-		return {
-			subject_city: JSONout.responseJSON.city,
-			subject_ip: JSONout.responseJSON.ip
-			};*/
 	};
 	if (INFO.getIP == true) {
 		var IPinfo = getIPinfo(); // asynchronous request, we'll see at the end of the script if we got a response
@@ -338,7 +336,10 @@
 					var return_str;
 					if (currSession == "practice") {
 						return_str = "<p>Welcome to this experiment! In this experiment, you will respond to images as fast as possible, while you are eating. Every day, this will take about 20 minutes.</p><p>Press next to continue</p>"}
-						else {return_str="<p>Good morning and welcome back to this experiment!</p><p>Press next to continue</p>"};
+						else 
+						{   var session_nr;
+							if (subjInfo != undefined) {if (subjInfo.length>0) {session_nr = subjInfo[0].next_session;}}
+							return_str="<p>Good morning and welcome back to this experiment!</p><p>Press next to start session "+session_nr+"</p>"};
 						return return_str;},
 				button_html: "<a class='jspsych-btn'>%choice%</a>",
 				on_finish: function (data) {
@@ -660,7 +661,8 @@ city:'undefined city',ip:'undefined IP'};
 			});
             // save data to disk before feedback is given
             saveData('end');
-            updateSubjectSessionFileOnDisk();
+            console.log('updating subject file on disk for '+subjectCode);
+            updateSubjectSessionFileOnDisk(subjectCode);
             var return_str;
             if (currSession=="practice") {
 				return_str = "<div class=\"jspsych-survey-multi-choice-question\"><p>This is the end of the practice of experiment.</p><p>Please call the researcher</p></div>";
@@ -754,6 +756,7 @@ city:'undefined city',ip:'undefined IP'};
 
     // Function to save experimental data to a CSV file
     function writeDataCSV(filename, filedata) {
+    	console.log('writing data to '+filename);
         $.ajax({
             type: 'post',
             cache: false,
@@ -792,29 +795,63 @@ city:'undefined city',ip:'undefined IP'};
     
     // function that reads subject info from JSON file
 	function readSubjectInfo(subjectCode) {
-		var subjectInfo = [];
+		//var subjectInfo = [];
 		// load json without caching
-		var nonCacheableURL = 'data/'+subjectCode+'.json?nocache=' + (new   
-			Date()).getTime();
-			console.log('reading from '+nonCacheableURL);
-		$.getJSON(nonCacheableURL, function(json) {
-			for (var i=0; i<json.length; i++) {
-				subjectInfo[i] = json[i];
-			}
-		});
+		var nonCacheableURL = 'data/'+subjectCode+'.json?nocache=' + (new Date()).getTime();
+
+		// read in data from JSON file in an asynchronous way (waiting for an answer before continuing)
+		var subjectInfo = (function() {
+			var result;
+			$.ajax({
+				type:'GET',
+				url:nonCacheableURL,
+				dataType:'json',
+				async:false,
+				success:function(data){
+					result = data;
+				}
+			});
+			return result;
+		})();
+
 		return subjectInfo;
 	}
+	
+    // function that saves subject info to JSON file
+	/*function writeSubjectInfo(subjInfo) {
+		//var subjectInfo = [];
+		// load json without caching
+		var saveURL = 'data/'+subjectCode+'.json';
+		// save data to JSON file in an asynchronous way (waiting for an answer before continuing)
+		var subjectInfo = (function() {
+			var result;
+			$.ajax({
+				type:'POST',
+				url:saveURL,
+				dataType:'json',
+				async:false,
+				success:function(data){
+					result = data;
+				}
+			});
+			return result;
+		})();
 
-	function updateSubjectSessionFileOnDisk() {
+		return subjectInfo;
+	}*/
+	
+
+	function updateSubjectSessionFileOnDisk(subjectName) {
 		// update subject JSON session info
+		console.log('in function updating file info for '+subjectName);
 		if (subjInfo!=undefined){
 				if (subjInfo.length>0){
-				subjInfo[0].next_session++;
-				subjInfo[0].last_session_date = (new Date()).toString();
-				var subjInfoURL = 'data/'+subjectCode+'.json';
-				console.log('writing to '+subjInfoURL);
-				console.log(JSON.stringify(subjInfo[0]));
-				writeDataCSV(subjInfoURL,JSON.stringify(subjInfo[0]));
+					subjInfo[0].next_session++;
+					subjInfo[0].last_session_date = (new Date()).toString();
+					var subjInfoURL = subjectName +'.json';
+					//console.log('writing to '+subjInfoURL);
+					//console.log(JSON.stringify(subjInfo));
+					writeDataCSV(subjInfoURL,JSON.stringify(subjInfo));
 			}
 		}
 	}
@@ -826,11 +863,18 @@ city:'undefined city',ip:'undefined IP'};
         nowString = now.getFullYear() + '-' +
             ('0' + (now.getMonth() + 1)).slice(-2) + '-' +
             ('0' + now.getDate()).slice(-2) +
-            '_' + randSessionId + '_' + sessionPhaseStr + '_'
-            +('0' + now.getHours()).slice(-2) + 'h' +
+            //'_' + randSessionId + '_' +
+            '_' + sessionPhaseStr + 
+            '_' +('0' + now.getHours()).slice(-2) + 'h' +
             ('0' + now.getMinutes()).slice(-2);
 
         var subj_id_str = subjectCode;
+        var session_id_str;
+        if (subjInfo!=undefined) {
+			if (subjInfo.length>0) {
+				session_id_str = subjInfo[0].next_session;
+			}
+        }
         /*if (jsPsych.data.subject == null) {
             // in case we the subject ID was not given in the URL, we fill in the IP address. If obtaining that didn't succeed, the subject name will be 'noID'
             subj_id_str = 'noID'; //+Math.floor(Math.random()*100000).toISOString();
@@ -850,7 +894,7 @@ city:'undefined city',ip:'undefined IP'};
 			console.log('Saving data to MySQL: '+subj_id_str+' & '+nowString+' & '+sessionPhaseStr);
 			writeDataMySQL(subj_id_str,nowString,sessionPhaseStr)
 		} else {
-			var savePath = subj_id_str + '_' + nowString + '.csv';
+			var savePath = subj_id_str + '_S' + session_id_str + '_' + nowString + '.csv';
 			console.log('Saving to CSV file: ' + savePath);
 			writeDataCSV(savePath, jsPsych.data.dataAsCSV());
         }
