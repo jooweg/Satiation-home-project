@@ -27,11 +27,12 @@
     var currSession; // = 'hard'; //jsPsych.randomization.sample(['easy', 'hard'], 1)[0];
 	var sessionStartTime = new Date().getTime();
 	var allErrors = ''; 	// string in which error messages will be posted
+	var sessionCanStart = true; 	// boolean to track whether all checks have passed
+	var sessionCannotStartStr = ''; 	// error message if session cannot start
 	
     /* =============== Experiment Preferences & Stimuli =============== */
     // get variables from URL or set defaults
-	var subjectCode = jsPsych.data.getURLVariable('subject') || "sub999";
-	console.log('SubjectCode '+subjectCode+', currSession '+currSession);
+	var subjectCode = jsPsych.data.getURLVariable('subject') || "sub999"; 	// sub999 is the default subject code
 	// read subject info from file
 	var subjInfo = readSubjectInfo(subjectCode);
 	var currSession;
@@ -41,11 +42,25 @@
 			else if (subjInfo[0].session_order[subjInfo[0].next_session-1]=='E') {currSession = 'easy'}
 			else if (subjInfo[0].session_order[subjInfo[0].next_session-1]=='H') {currSession = 'hard'}
 			console.log('Based on JSON subjInfo, this is session '+subjInfo[0].next_session+' with diffidculty '+currSession);
+			var hoursPassed = (sessionStartTime-Date.parse(subjInfo[0].last_session_date))/3600000; 	// calculate #hours since last session
+			console.log('The last session was '+hoursPassed+ ' hours ago.');
+			
+			if (subjInfo[0].next_session > subjInfo[0].session_order.length) {
+				// when all planned experimental session have been finished, don't start a new one
+				sessionCanStart = false; 	// cancel start of experiment
+				sessionCannotStartStr = 'You have finished all planned sessions. Thank you for participating!';			
+			} else if (Math.abs(hoursPassed) < 20) {
+				// when the previous session was too recent (<20 hrs) stop the experiment and inform the participant
+				sessionCanStart = false; 	// cancel start of experiment
+				sessionCannotStartStr = 'You have recently finished an experimental session. Please come back when your next session is planned.';
+			}
 		}
 	}
 	currSession =  currSession || 'practice'; 	// in case no match was found, default to practice session
 	subjectCode = subjectCode.toLowerCase();
 	currSession = currSession.toLowerCase();
+	console.log('SubjectCode '+subjectCode+', currSession '+currSession);
+
 
 	//console.log('JSON subject info for subject: '+subjectCode);
 	//console.log(subjInfo);
@@ -53,8 +68,8 @@
     // INFO structure with experiment preferences
     var INFO = {
         nBlocks: 1,
-        nLowFreqTrialsPerBlock: 1, //13, // for 19.5 minutes
-        nHighFreqTrialsPerBlock: 1, //52, // for 19.5 minutes
+        nLowFreqTrialsPerBlock: 13, // for 19.5 minutes
+        nHighFreqTrialsPerBlock: 52, // for 19.5 minutes
         trialDuration: 15000,	// duration of each trial (msec)
         categoryInstructDuration: 3000,	// duration of category instruction (msec) at start trials
         nImgMasks2Preload: 30,
@@ -64,7 +79,7 @@
 		getIP: false, 	// should we check IP address? (warning:seems to trigger ad blockers )
 		displayTimeTriggers: false, 	// controls whether internal time (of phone/pc) is shown on the screen at the start and end of experiment, used as time triggers to synchronise (only necessary when doing task in the lab)
         respLetterLocation: 4,  // obsolete? location of category letter (for img/G35.jpg    
-        task_version: 1.01, 	// version number of task
+        task_version: 1.02, 	// version number of task
 	};
     //console.log(INFO);
 
@@ -300,7 +315,14 @@
     console.log(trialBlocks);
 	
 	var timeline = []; // initialise (expanded) trial structure 
-	fillTimeline();
+	if (sessionCanStart==true) {
+		// all checks have passed, set up the experiment
+		fillTimeline();
+	} else {
+		// inform the participant that we can't start
+		document.write(sessionCannotStartStr);
+		jsPsych.endExperiment(sessionCannotStartStr);
+	}
 	
 	// function that fills the timeline (after subject info is read from file)
 	function fillTimeline() {
@@ -807,9 +829,12 @@ city:'undefined city',ip:'undefined IP'};
 				url:nonCacheableURL,
 				dataType:'json',
 				async:false,
-				success:function(data){
+				success:function(data){ 	// when request succeeds, return data
 					result = data;
-				}
+				},
+				error:function(data){ 		// when request fails, terminate experiment
+					console.log('miserable fail!'+nonCacheableURL);
+					document.write('Error: subject data file '+nonCacheableURL+' not found. Please notify the researcher, including this message.');}
 			});
 			return result;
 		})();
@@ -894,7 +919,7 @@ city:'undefined city',ip:'undefined IP'};
 			console.log('Saving data to MySQL: '+subj_id_str+' & '+nowString+' & '+sessionPhaseStr);
 			writeDataMySQL(subj_id_str,nowString,sessionPhaseStr)
 		} else {
-			var savePath = subj_id_str + '_S' + session_id_str + '_' + nowString + '.csv';
+			var savePath = subj_id_str + '_S' + session_id_str + '_' + currSession + '_' + nowString + '.csv';
 			console.log('Saving to CSV file: ' + savePath);
 			writeDataCSV(savePath, jsPsych.data.dataAsCSV());
         }
