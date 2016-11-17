@@ -17,7 +17,7 @@
     <script src="jspsych-5.0.3/plugins/jspsych-survey-multi-choice.js"></script>
     <script src="platform.js"></script>
     <link href="jspsych-5.0.3/css/jspsych-visdet_NL_21_10.css" rel="stylesheet" type="text/css"></link>
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 </head>
 
 <body>
@@ -29,6 +29,8 @@
 	var allErrors = ''; 	// string in which error messages will be posted
 	var sessionCanStart = true; 	// boolean to track whether all checks have passed
 	var sessionCannotStartStr = ''; 	// error message if session cannot start
+	var log2console = false; 	// boolean to set whether we should print to the console
+	var subjects2GiveFeedback = ['sub03','test_joost','test_iris','test_janne','test_jules','test_sophie','test_thalia'];
 	
     /* =============== Experiment Preferences & Stimuli =============== */
     // get variables from URL or set defaults
@@ -41,16 +43,18 @@
 			if (subjInfo[0].next_session==0) {currSession = 'practice';}
 			else if (subjInfo[0].session_order[subjInfo[0].next_session-1]=='E') {currSession = 'easy'}
 			else if (subjInfo[0].session_order[subjInfo[0].next_session-1]=='H') {currSession = 'hard'}
-			console.log('Based on JSON subjInfo, this is session '+subjInfo[0].next_session+' with diffidculty '+currSession);
-			var hoursPassed = (sessionStartTime-Date.parse(subjInfo[0].last_session_date))/3600000; 	// calculate #hours since last session
-			console.log('The last session was '+hoursPassed+ ' hours ago.');
+			console_log('Based on JSON subjInfo, this is session '+subjInfo[0].next_session+' with diffidculty '+currSession);
+			var lastSessionDate = new Date(Date.parse(subjInfo[0].last_session_date));
+			var hoursPassed = (sessionStartTime-lastSessionDate)/3600000; 	// calculate #hours since last session
+			var exactSameDay = ((new Date(sessionStartTime)).getDay()==lastSessionDate.getDay())&&(hoursPassed<24); 	// check if last session was also today
+			console_log('The last session was '+hoursPassed+ ' hours ago and was today: '+exactSameDay);
 			
 			if (subjInfo[0].next_session > subjInfo[0].session_order.length) {
 				// when all planned experimental session have been finished, don't start a new one
 				sessionCanStart = false; 	// cancel start of experiment
 				sessionCannotStartStr = 'You have finished all planned sessions. Thank you for participating!';			
-			} else if (Math.abs(hoursPassed) < 20) {
-				// when the previous session was too recent (<20 hrs) stop the experiment and inform the participant
+			} else if (exactSameDay==true) {
+				// when the previous session was today, stop the experiment and inform the participant
 				sessionCanStart = false; 	// cancel start of experiment
 				sessionCannotStartStr = 'You have recently finished an experimental session. Please come back when your next session is planned.';
 			}
@@ -59,11 +63,11 @@
 	currSession =  currSession || 'practice'; 	// in case no match was found, default to practice session
 	subjectCode = subjectCode.toLowerCase();
 	currSession = currSession.toLowerCase();
-	console.log('SubjectCode '+subjectCode+', currSession '+currSession);
+	console_log('SubjectCode '+subjectCode+', currSession '+currSession);
 
 
-	//console.log('JSON subject info for subject: '+subjectCode);
-	//console.log(subjInfo);
+	//console_log('JSON subject info for subject: '+subjectCode);
+	//console_log(subjInfo);
 	
     // INFO structure with experiment preferences
     var INFO = {
@@ -81,7 +85,7 @@
         respLetterLocation: 4,  // obsolete? location of category letter (for img/G35.jpg    
         task_version: 1.02, 	// version number of task
 	};
-    //console.log(INFO);
+    //console_log(INFO);
 
 	// get IP + location information
 	var subject_city;
@@ -94,13 +98,13 @@
 		// $ (dollar sign) denotes jquery request
 		var JSONdata;
 		var JSONout = $.getJSON('http://freegeoip.net/json/?callback=?', function (location, textStatus, jqXHR) {
-			//console.log("callback running");
-			//console.log(textStatus);
-			//console.log(jqXHR);
+			//console_log("callback running");
+			//console_log(textStatus);
+			//console_log(jqXHR);
 			if (textStatus == 'success') {
 				subject_city = jqXHR.responseJSON.city;
 				subject_ip = jqXHR.responseJSON.ip;
-				//console.log(jqXHR);
+				//console_log(jqXHR);
 				//$('#region-name').html(location.region_name);
 			};
 		});
@@ -109,10 +113,10 @@
 	if (INFO.getIP == true) {
 		var IPinfo = getIPinfo(); // asynchronous request, we'll see at the end of the script if we got a response
 	}
-	//console.log(IPinfo);
+	//console_log(IPinfo);
 	
     // define all tools images
-    var imgsTools2ChooseFrom = ['G01.jpg', 'G02.jpg', 'G03.jpg', 'G04.jpg', 'G05.jpg', 'G06.jpg', 'G07.jpg', 'G08.jpg', 'G09.jpg', 'G10.jpg', 'G11.jpg', 'G12.jpg', 'G13.jpg', 'G14.jpg', 'G15.jpg', 'G16.jpg', 'G17.jpg', 'G18.jpg', 'G19.jpg', 'G20.jpg', 'G21.jpg', 'G22.jpg', 'G23.jpg', 'G24.jpg', 'G25.jpg', 'G26.jpg', 'G27.jpg', 'G28.jpg', 'G29.jpg', 'G30.jpg', 'G31.jpg', 'G32.jpg', 'G33.jpg', 'G34.jpg', 'G35.jpg', 'G36.jpg', 'G37.jpg', 'G38.jpg', 'G39.jpg', 'G40.jpg', 'G41.jpg', 'G42.jpg', 'G43.jpg', 'G44.jpg', 'G45.jpg', 'G46.jpg', 'G47.jpg', 'G48.jpg', 'G49.jpg', 'G50.jpg', 'G51.jpg', 'G52.jpg', 'G53.jpg', 'G54.jpg', 'G55.jpg', 'G56.jpg', 'G57.jpg', 'G58.jpg', 'G59.jpg', 'G60.jpg', 'G61.jpg', 'G62.jpg', 'G63.jpg', 'G64.jpg', 'G65.jpg', 'G66.jpg', 'G67.jpg', 'G68.jpg', 'G69.jpg', 'G70.jpg'];
+    var imgsTools2ChooseFrom = ['G01.jpg', 'G02.jpg', 'G03.jpg', 'G04.jpg', 'G05.jpg', 'G06.jpg', 'G07.jpg', 'G08.jpg', 'G09.jpg', 'G10.jpg', 'G11.jpg', 'G12.jpg', 'G13.jpg', 'G14.jpg', 'G15.jpg', 'G16.jpg', 'G17.jpg', 'G18.jpg', 'G19.jpg', 'G20.jpg', 'G21.jpg', 'G22.jpg', 'G23.jpg', 'G24.jpg', 'G25.jpg', 'G26.jpg', 'G27.jpg', 'G28.jpg', 'G29.jpg', 'G30.jpg', 'G31.jpg', 'G32.jpg', 'G33.jpg', 'G34.jpg', 'G35.jpg', 'G36.jpg', 'G37.jpg', 'G38.jpg', 'G39.jpg', 'G40.jpg', 'G41.jpg', 'G42.jpg', 'G43.jpg', 'G44.jpg', 'G45.jpg', 'G46.jpg', 'G47.jpg', 'G48.jpg', 'G49.jpg', 'G50.jpg', 'G51.jpg', 'G52.jpg', 'G53.jpg', 'G54.jpg', 'G55.jpg', 'G56.jpg', 'G57.jpg', 'G58.jpg', 'G59.jpg', 'G60.jpg', 'G61.jpg', 'G62.jpg', 'G64.jpg', 'G65.jpg', 'G66.jpg', 'G67.jpg', 'G68.jpg', 'G69.jpg', 'G70.jpg'];
 
     // define all furniture images
     var imgsFurniture2ChooseFrom = ['F01.jpg', 'F02.jpg', 'F03.jpg', 'F04.jpg', 'F05.jpg', 'F06.jpg', 'F07.jpg', 'F08.jpg', 'F09.jpg', 'F10.jpg', 'F11.jpg', 'F12.jpg', 'F13.jpg', 'F14.jpg', 'F15.jpg', 'F16.jpg', 'F17.jpg', 'F18.jpg', 'F19.jpg', 'F20.jpg', 'F21.jpg', 'F22.jpg', 'F23.jpg', 'F24.jpg', 'F25.jpg', 'F26.jpg', 'F27.jpg', 'F28.jpg', 'F29.jpg', 'F30.jpg', 'F31.jpg', 'F32.jpg', 'F33.jpg', 'F34.jpg', 'F35.jpg', 'F36.jpg', 'F37.jpg', 'F38.jpg', 'F39.jpg', 'F40.jpg', 'F41.jpg', 'F42.jpg', 'F43.jpg', 'F44.jpg', 'F45.jpg', 'F46.jpg', 'F47.jpg', 'F48.jpg', 'F49.jpg', 'F50.jpg', 'F51.jpg', 'F52.jpg', 'F53.jpg', 'F54.jpg', 'F55.jpg', 'F56.jpg', 'F57.jpg', 'F58.jpg', 'F59.jpg', 'F60.jpg', 'F61.jpg', 'F62.jpg', 'F63.jpg', 'F64.jpg', 'F65.jpg', 'F66.jpg', 'F67.jpg', 'F68.jpg', 'F69.jpg', 'F70.jpg'];
@@ -126,11 +130,11 @@
     var imgToys = makeImgPath(jsPsych.randomization.sample(imgsToys2ChooseFrom, INFO.nImgPerCategory2Preload));
 
     // define all mask images
-    var imgsMasks2ChooseFrom = ['scrp_F01.jpg', 'scrp_F02.jpg', 'scrp_F03.jpg', 'scrp_F04.jpg', 'scrp_F05.jpg', 'scrp_F06.jpg', 'scrp_F07.jpg', 'scrp_F08.jpg', 'scrp_F09.jpg', 'scrp_F10.jpg', 'scrp_F11.jpg', 'scrp_F12.jpg', 'scrp_F13.jpg', 'scrp_F14.jpg', 'scrp_F15.jpg', 'scrp_F16.jpg', 'scrp_F17.jpg', 'scrp_F18.jpg', 'scrp_F19.jpg', 'scrp_F20.jpg', 'scrp_F21.jpg', 'scrp_F22.jpg', 'scrp_F23.jpg', 'scrp_F24.jpg', 'scrp_F25.jpg', 'scrp_F26.jpg', 'scrp_F27.jpg', 'scrp_F28.jpg', 'scrp_F29.jpg', 'scrp_F30.jpg', 'scrp_F31.jpg', 'scrp_F32.jpg', 'scrp_F33.jpg', 'scrp_F34.jpg', 'scrp_F35.jpg', 'scrp_F36.jpg', 'scrp_F37.jpg', 'scrp_F38.jpg', 'scrp_F39.jpg', 'scrp_F40.jpg', 'scrp_F41.jpg', 'scrp_F42.jpg', 'scrp_F43.jpg', 'scrp_F44.jpg', 'scrp_F45.jpg', 'scrp_F46.jpg', 'scrp_F47.jpg', 'scrp_F48.jpg', 'scrp_F49.jpg', 'scrp_F50.jpg', 'scrp_F51.jpg', 'scrp_F52.jpg', 'scrp_F53.jpg', 'scrp_F54.jpg', 'scrp_F55.jpg', 'scrp_F56.jpg', 'scrp_F57.jpg', 'scrp_F58.jpg', 'scrp_F59.jpg', 'scrp_F60.jpg', 'scrp_F61.jpg', 'scrp_F62.jpg', 'scrp_F63.jpg', 'scrp_F64.jpg', 'scrp_F65.jpg', 'scrp_F66.jpg', 'scrp_F67.jpg', 'scrp_F68.jpg', 'scrp_F69.jpg', 'scrp_F70.jpg', 'scrp_G01.jpg', 'scrp_G02.jpg', 'scrp_G03.jpg', 'scrp_G04.jpg', 'scrp_G05.jpg', 'scrp_G06.jpg', 'scrp_G07.jpg', 'scrp_G08.jpg', 'scrp_G09.jpg', 'scrp_G10.jpg', 'scrp_G11.jpg', 'scrp_G12.jpg', 'scrp_G13.jpg', 'scrp_G14.jpg', 'scrp_G15.jpg', 'scrp_G16.jpg', 'scrp_G17.jpg', 'scrp_G18.jpg', 'scrp_G19.jpg', 'scrp_G20.jpg', 'scrp_G21.jpg', 'scrp_G22.jpg', 'scrp_G23.jpg', 'scrp_G24.jpg', 'scrp_G25.jpg', 'scrp_G26.jpg', 'scrp_G27.jpg', 'scrp_G28.jpg', 'scrp_G29.jpg', 'scrp_G30.jpg', 'scrp_G31.jpg', 'scrp_G32.jpg', 'scrp_G33.jpg', 'scrp_G34.jpg', 'scrp_G35.jpg', 'scrp_G36.jpg', 'scrp_G37.jpg', 'scrp_G38.jpg', 'scrp_G39.jpg', 'scrp_G40.jpg', 'scrp_G41.jpg', 'scrp_G42.jpg', 'scrp_G43.jpg', 'scrp_G44.jpg', 'scrp_G45.jpg', 'scrp_G46.jpg', 'scrp_G47.jpg', 'scrp_G48.jpg', 'scrp_G49.jpg', 'scrp_G50.jpg', 'scrp_G51.jpg', 'scrp_G52.jpg', 'scrp_G53.jpg', 'scrp_G54.jpg', 'scrp_G55.jpg', 'scrp_G56.jpg', 'scrp_G57.jpg', 'scrp_G58.jpg', 'scrp_G59.jpg', 'scrp_G60.jpg', 'scrp_G61.jpg', 'scrp_G62.jpg', 'scrp_G63.jpg', 'scrp_G64.jpg', 'scrp_G65.jpg', 'scrp_G66.jpg', 'scrp_G67.jpg', 'scrp_G68.jpg', 'scrp_G69.jpg', 'scrp_G70.jpg', 'scrp_T01.jpg', 'scrp_T02.jpg', 'scrp_T03.jpg', 'scrp_T04.jpg', 'scrp_T05.jpg', 'scrp_T06.jpg', 'scrp_T07.jpg', 'scrp_T08.jpg', 'scrp_T09.jpg', 'scrp_T10.jpg', 'scrp_T11.jpg', 'scrp_T12.jpg', 'scrp_T13.jpg', 'scrp_T14.jpg', 'scrp_T15.jpg', 'scrp_T16.jpg', 'scrp_T17.jpg', 'scrp_T18.jpg', 'scrp_T19.jpg', 'scrp_T20.jpg', 'scrp_T21.jpg', 'scrp_T22.jpg', 'scrp_T23.jpg', 'scrp_T24.jpg', 'scrp_T25.jpg', 'scrp_T26.jpg', 'scrp_T27.jpg', 'scrp_T28.jpg', 'scrp_T29.jpg', 'scrp_T30.jpg', 'scrp_T31.jpg', 'scrp_T32.jpg', 'scrp_T33.jpg', 'scrp_T34.jpg', 'scrp_T35.jpg', 'scrp_T36.jpg', 'scrp_T37.jpg', 'scrp_T38.jpg', 'scrp_T39.jpg', 'scrp_T40.jpg', 'scrp_T41.jpg', 'scrp_T42.jpg', 'scrp_T43.jpg', 'scrp_T44.jpg', 'scrp_T45.jpg', 'scrp_T46.jpg', 'scrp_T47.jpg', 'scrp_T48.jpg', 'scrp_T49.jpg', 'scrp_T50.jpg', 'scrp_T51.jpg', 'scrp_T52.jpg', 'scrp_T53.jpg', 'scrp_T54.jpg', 'scrp_T55.jpg', 'scrp_T56.jpg', 'scrp_T57.jpg', 'scrp_T58.jpg', 'scrp_T59.jpg', 'scrp_T60.jpg', 'scrp_T61.jpg', 'scrp_T62.jpg', 'scrp_T63.jpg', 'scrp_T64.jpg', 'scrp_T65.jpg', 'scrp_T66.jpg', 'scrp_T67.jpg', 'scrp_T68.jpg', 'scrp_T69.jpg', 'scrp_T70.jpg'];
+    var imgsMasks2ChooseFrom = ['scrp_F01.jpg', 'scrp_F02.jpg', 'scrp_F03.jpg', 'scrp_F04.jpg', 'scrp_F05.jpg', 'scrp_F06.jpg', 'scrp_F07.jpg', 'scrp_F08.jpg', 'scrp_F09.jpg', 'scrp_F10.jpg', 'scrp_F11.jpg', 'scrp_F12.jpg', 'scrp_F13.jpg', 'scrp_F14.jpg', 'scrp_F15.jpg', 'scrp_F16.jpg', 'scrp_F17.jpg', 'scrp_F18.jpg', 'scrp_F19.jpg', 'scrp_F20.jpg', 'scrp_F21.jpg', 'scrp_F22.jpg', 'scrp_F23.jpg', 'scrp_F24.jpg', 'scrp_F25.jpg', 'scrp_F26.jpg', 'scrp_F27.jpg', 'scrp_F28.jpg', 'scrp_F29.jpg', 'scrp_F30.jpg', 'scrp_F31.jpg', 'scrp_F32.jpg', 'scrp_F33.jpg', 'scrp_F34.jpg', 'scrp_F35.jpg', 'scrp_F36.jpg', 'scrp_F37.jpg', 'scrp_F38.jpg', 'scrp_F39.jpg', 'scrp_F40.jpg', 'scrp_F41.jpg', 'scrp_F42.jpg', 'scrp_F43.jpg', 'scrp_F44.jpg', 'scrp_F45.jpg', 'scrp_F46.jpg', 'scrp_F47.jpg', 'scrp_F48.jpg', 'scrp_F49.jpg', 'scrp_F50.jpg', 'scrp_F51.jpg', 'scrp_F52.jpg', 'scrp_F53.jpg', 'scrp_F54.jpg', 'scrp_F55.jpg', 'scrp_F56.jpg', 'scrp_F57.jpg', 'scrp_F58.jpg', 'scrp_F59.jpg', 'scrp_F60.jpg', 'scrp_F61.jpg', 'scrp_F62.jpg', 'scrp_F63.jpg', 'scrp_F64.jpg', 'scrp_F65.jpg', 'scrp_F66.jpg', 'scrp_F67.jpg', 'scrp_F68.jpg', 'scrp_F69.jpg', 'scrp_F70.jpg', 'scrp_G01.jpg', 'scrp_G02.jpg', 'scrp_G03.jpg', 'scrp_G04.jpg', 'scrp_G05.jpg', 'scrp_G06.jpg', 'scrp_G07.jpg', 'scrp_G08.jpg', 'scrp_G09.jpg', 'scrp_G10.jpg', 'scrp_G11.jpg', 'scrp_G12.jpg', 'scrp_G13.jpg', 'scrp_G14.jpg', 'scrp_G15.jpg', 'scrp_G16.jpg', 'scrp_G17.jpg', 'scrp_G18.jpg', 'scrp_G19.jpg', 'scrp_G20.jpg', 'scrp_G21.jpg', 'scrp_G22.jpg', 'scrp_G23.jpg', 'scrp_G24.jpg', 'scrp_G25.jpg', 'scrp_G26.jpg', 'scrp_G27.jpg', 'scrp_G28.jpg', 'scrp_G29.jpg', 'scrp_G30.jpg', 'scrp_G31.jpg', 'scrp_G32.jpg', 'scrp_G33.jpg', 'scrp_G34.jpg', 'scrp_G35.jpg', 'scrp_G36.jpg', 'scrp_G37.jpg', 'scrp_G38.jpg', 'scrp_G39.jpg', 'scrp_G40.jpg', 'scrp_G41.jpg', 'scrp_G42.jpg', 'scrp_G43.jpg', 'scrp_G44.jpg', 'scrp_G45.jpg', 'scrp_G46.jpg', 'scrp_G47.jpg', 'scrp_G48.jpg', 'scrp_G49.jpg', 'scrp_G50.jpg', 'scrp_G51.jpg', 'scrp_G52.jpg', 'scrp_G53.jpg', 'scrp_G54.jpg', 'scrp_G55.jpg', 'scrp_G56.jpg', 'scrp_G57.jpg', 'scrp_G58.jpg', 'scrp_G59.jpg', 'scrp_G60.jpg', 'scrp_G61.jpg', 'scrp_G62.jpg', 'scrp_G64.jpg', 'scrp_G65.jpg', 'scrp_G66.jpg', 'scrp_G67.jpg', 'scrp_G68.jpg', 'scrp_G69.jpg', 'scrp_G70.jpg', 'scrp_T01.jpg', 'scrp_T02.jpg', 'scrp_T03.jpg', 'scrp_T04.jpg', 'scrp_T05.jpg', 'scrp_T06.jpg', 'scrp_T07.jpg', 'scrp_T08.jpg', 'scrp_T09.jpg', 'scrp_T10.jpg', 'scrp_T11.jpg', 'scrp_T12.jpg', 'scrp_T13.jpg', 'scrp_T14.jpg', 'scrp_T15.jpg', 'scrp_T16.jpg', 'scrp_T17.jpg', 'scrp_T18.jpg', 'scrp_T19.jpg', 'scrp_T20.jpg', 'scrp_T21.jpg', 'scrp_T22.jpg', 'scrp_T23.jpg', 'scrp_T24.jpg', 'scrp_T25.jpg', 'scrp_T26.jpg', 'scrp_T27.jpg', 'scrp_T28.jpg', 'scrp_T29.jpg', 'scrp_T30.jpg', 'scrp_T31.jpg', 'scrp_T32.jpg', 'scrp_T33.jpg', 'scrp_T34.jpg', 'scrp_T35.jpg', 'scrp_T36.jpg', 'scrp_T37.jpg', 'scrp_T38.jpg', 'scrp_T39.jpg', 'scrp_T40.jpg', 'scrp_T41.jpg', 'scrp_T42.jpg', 'scrp_T43.jpg', 'scrp_T44.jpg', 'scrp_T45.jpg', 'scrp_T46.jpg', 'scrp_T47.jpg', 'scrp_T48.jpg', 'scrp_T49.jpg', 'scrp_T50.jpg', 'scrp_T51.jpg', 'scrp_T52.jpg', 'scrp_T53.jpg', 'scrp_T54.jpg', 'scrp_T55.jpg', 'scrp_T56.jpg', 'scrp_T57.jpg', 'scrp_T58.jpg', 'scrp_T59.jpg', 'scrp_T60.jpg', 'scrp_T61.jpg', 'scrp_T62.jpg', 'scrp_T63.jpg', 'scrp_T64.jpg', 'scrp_T65.jpg', 'scrp_T66.jpg', 'scrp_T67.jpg', 'scrp_T68.jpg', 'scrp_T69.jpg', 'scrp_T70.jpg'];
     // from the whole set of images, select a random subset (size=INFO.nImgMasks2Preload, put in right path format)
     var imgMasks = makeImgPath(jsPsych.randomization.sample(imgsMasks2ChooseFrom, INFO.nImgMasks2Preload));
-    console.log('imgMasks length: ' + imgMasks.length);
-    //console.log('imgMasks: ' + imgMasks);
+    console_log('imgMasks length: ' + imgMasks.length);
+    //console_log('imgMasks: ' + imgMasks);
 
     // make a list of all images to preload
     var img2Preload = imgMasks.slice(0); // clone the masks list
@@ -139,7 +143,7 @@
     // list of other images to preload
     var otherImg2Preload = makeImgPath(['icon_play.png','icon_recording.png']);
     img2Preload = img2Preload.concat(otherImg2Preload); // add the other images
-    console.log('preloading ' + img2Preload.length + ' images');
+    console_log('preloading ' + img2Preload.length + ' images');
 
     // Preload all images into memory at the start of this session (and time how long that took)
     var t0_4_preload = Date.now(); // get #ms from midnight 1970
@@ -159,8 +163,8 @@
 				image.src = imgList[iIm];
 				if (image.complete==false) {failedList.push(imgList[iIm])};
 			};
-		console.log('failed list');
-		console.log(failedList);
+		console_log('failed list');
+		console_log(failedList);
 		return failedList;
 	}
 	function updateLoadedCount(nLoaded){
@@ -168,15 +172,15 @@
 			
 		// could put something fancier here, like a progress bar
 		// or updating text in the DOM.
-		//console.log('preloaded '+img2Preload[nLoaded]);
+		//console_log('preloaded '+img2Preload[nLoaded]);
 		if (percentcomplete == 100) {
 			// fin out which images failed to load
 			var failed2load = getPreloadFails(img2Preload);
 		
 			preloadDuration = Math.round(Date.now()-t0_4_preload.now); // determine how long it took to load
-			console.log('Preloaded all '+nLoaded+' images in '+preloadDuration+' msec. #fails: '+failed2load.length);
-			console.log('After preload subject info:');
-			console.log(subjInfo);
+			console_log('Preloaded all '+nLoaded+' images in '+preloadDuration+' msec. #fails: '+failed2load.length);
+			console_log('After preload subject info:');
+			console_log(subjInfo);
 		};
 	}
 
@@ -185,7 +189,7 @@
    	var t0_researcher_start;
 	var t0Date;
 	var t0;
-	console.log('160: t0_4_preload: '+t0_4_preload);
+	console_log('160: t0_4_preload: '+t0_4_preload);
 	//determine session type from info read from file
 /*	if (subjInfo != undefined) {
 		if (subjInfo[0].next_session==0) {
@@ -195,7 +199,7 @@
 		} else {
 			currSession='Easy'
 		};
-		console.log("currSession = "+currSession);
+		console_log("currSession = "+currSession);
 	}*/
 
     jsPsych.data.addProperties({
@@ -231,13 +235,13 @@
     // create lists of the easy and hard trials from the listed factors
     var easyTrials = jsPsych.randomization.factorial(easyFactors, 1);
     var hardTrials = jsPsych.randomization.factorial(hardFactors, 1);
-    //console.log(INFO.trialDuration);
-    //console.log('easyTrials');
-    //console.log(easyTrials);
-    //console.log(easyTrials[0].dur_stumulus);
+    //console_log(INFO.trialDuration);
+    //console_log('easyTrials');
+    //console_log(easyTrials);
+    //console_log(easyTrials[0].dur_stumulus);
     var easyTrialNSubtrials = Math.ceil(INFO.trialDuration/(easyTrials[0].dur_stimulus + easyTrials[0].dur_mask));
     var hardTrialNSubtrials = Math.ceil(INFO.trialDuration/(hardTrials[0].dur_stimulus + hardTrials[0].dur_mask));
-    console.log('# subtrials easy trials: '+easyTrialNSubtrials+'. # subtrials hard trials: '+hardTrialNSubtrials);
+    console_log('# subtrials easy trials: '+easyTrialNSubtrials+'. # subtrials hard trials: '+hardTrialNSubtrials);
 	var currEasyTrials;
 	var currHardTrials;
 	
@@ -268,8 +272,8 @@
 			trialBlocks[0][iTrial].subTrialStimuli = jsPsych.randomization.sample(imgCategorical,currNSubtrials,false);
 			trialBlocks[0][iTrial].subTrialMasks = jsPsych.randomization.sample(imgMasks,currNSubtrials,false);
 			trialBlocks[0][iTrial].subTrialResponseRequired = responseRequired(trialBlocks[0][iTrial].subTrialStimuli,trialBlocks[0][iTrial].response_category);
-			//console.log('trials in practice session block ('+trialBlocks[0][iTrial].trial_difficulty+'), trial '+iTrial+' (looking for #'+currNSubtrials+' subtrials out of '+imgCategorical.length+')');
-			//console.log(trialBlocks[0][iTrial]);			
+			//console_log('trials in practice session block ('+trialBlocks[0][iTrial].trial_difficulty+'), trial '+iTrial+' (looking for #'+currNSubtrials+' subtrials out of '+imgCategorical.length+')');
+			//console_log(trialBlocks[0][iTrial]);			
         };	
     } else { 	// no practice session
 	
@@ -279,15 +283,15 @@
 				currEasyTrials = jsPsych.randomization.repeat(easyTrials, Math.ceil(INFO.nHighFreqTrialsPerBlock / easyTrials.length)).slice(0, INFO.nHighFreqTrialsPerBlock);
 				currHardTrials = jsPsych.randomization.repeat(hardTrials, Math.ceil(INFO.nLowFreqTrialsPerBlock / hardTrials.length)).slice(0, INFO.nLowFreqTrialsPerBlock);
 				trialBlocks[iBlock] = jsPsych.randomization.repeat(currEasyTrials.concat(currHardTrials), 1);			
-				//console.log('easy: trialBlocks[iBlock]');
-				//console.log([trialBlocks[iBlock]]);
+				//console_log('easy: trialBlocks[iBlock]');
+				//console_log([trialBlocks[iBlock]]);
 
 			} else { // hard session
 				currHardTrials = jsPsych.randomization.repeat(hardTrials, Math.ceil(INFO.nHighFreqTrialsPerBlock / hardTrials.length)).slice(0, INFO.nHighFreqTrialsPerBlock);
 				currEasyTrials = jsPsych.randomization.repeat(easyTrials, Math.ceil(INFO.nLowFreqTrialsPerBlock / easyTrials.length)).slice(0, INFO.nLowFreqTrialsPerBlock);
 				trialBlocks[iBlock] = jsPsych.randomization.repeat(currEasyTrials.concat(currHardTrials), 1);
-				//console.log('hard: trialBlocks[iBlock]');
-				//console.log([trialBlocks[iBlock]]);
+				//console_log('hard: trialBlocks[iBlock]');
+				//console_log([trialBlocks[iBlock]]);
 			};
 			
 			// fill the trials in each block with subtrials
@@ -302,17 +306,17 @@
 				trialBlocks[iBlock][iTrial].subTrialStimuli = jsPsych.randomization.sample(imgCategorical,currNSubtrials,false);
 				trialBlocks[iBlock][iTrial].subTrialMasks = jsPsych.randomization.sample(imgMasks,currNSubtrials,false);
 				trialBlocks[iBlock][iTrial].subTrialResponseRequired = responseRequired(trialBlocks[iBlock][iTrial].subTrialStimuli,trialBlocks[iBlock][iTrial].response_category);
-				console.log('trials in block '+iBlock+' ('+trialBlocks[iBlock][iTrial].trial_difficulty+'), trial '+iTrial+' (looking for #'+currNSubtrials+' subtrials out of '+imgCategorical.length+')');
-				console.log(trialBlocks[iBlock][iTrial]);			
+				console_log('trials in block '+iBlock+' ('+trialBlocks[iBlock][iTrial].trial_difficulty+'), trial '+iTrial+' (looking for #'+currNSubtrials+' subtrials out of '+imgCategorical.length+')');
+				console_log(trialBlocks[iBlock][iTrial]);			
 			};
 		}			
     }
        
-    //console.log(easyTrials);
-    //console.log(hardTrials);
-    //console.log(INFO);
-    console.log('trial blocks in current session: '+currSession);
-    console.log(trialBlocks);
+    //console_log(easyTrials);
+    //console_log(hardTrials);
+    //console_log(INFO);
+    console_log('trial blocks in current session: '+currSession);
+    console_log(trialBlocks);
 	
 	var timeline = []; // initialise (expanded) trial structure 
 	if (sessionCanStart==true) {
@@ -338,13 +342,13 @@
 					subjectCode = responses.Q0;
 					jsPsych.data.subject = subjectCode;
 					currSession = responses.Q1;
-					console.log('updated subject code to '+jsPsych.data.subject);
+					console_log('updated subject code to '+jsPsych.data.subject);
 				}
-				console.log('Subject info after subj id screen:');
-				console.log(subjInfo);
-				console.log("timeline length before insertion= "+timeline.length());
+				console_log('Subject info after subj id screen:');
+				console_log(subjInfo);
+				console_log("timeline length before insertion= "+timeline.length());
 				timeline.push('bla');
-				console.log("timeline length after insertion= "+timeline.length());			
+				console_log("timeline length after insertion= "+timeline.length());			
 			  }
 			};
 			timeline.push(subjectIdScreen);
@@ -366,7 +370,7 @@
 				button_html: "<a class='jspsych-btn'>%choice%</a>",
 				on_finish: function (data) {
 					if (data.button_pressed==0) {consentForSave = true;}
-					console.log('consent given: '+consentForSave);    	
+					console_log('consent given: '+consentForSave);    	
 				}
 			};
 			timeline.push(openingScreen);		
@@ -443,7 +447,7 @@
 					t0_jspsych: jsPsych.startTime(),
 					});
 				saveData('start'); 
-				console.log('experiment start time: '+jsPsych.startTime());
+				console_log('experiment start time: '+jsPsych.startTime());
 
 			},
 
@@ -463,8 +467,8 @@
 			for (var iTrial = 0;iTrial < trialBlocks[iBlock].length; iTrial++) {
 				// each trial starts with response instructions
 				currTrial = trialBlocks[iBlock][iTrial];	
-				//console.log('block '+iBlock+' trial '+iTrial);
-				console.log(currTrial);				timeline.push(createTrialInstructions(currTrial.response_category,currTrial.trial_difficulty,iBlock));
+				//console_log('block '+iBlock+' trial '+iTrial);
+				console_log(currTrial);				timeline.push(createTrialInstructions(currTrial.response_category,currTrial.trial_difficulty,iBlock));
 				// fill the list with the current subtrials
 				for (var iSubTrial = 0; iSubTrial < currTrial.subTrialStimuli.length; iSubTrial++) {
 					nextTimelineTrial = {
@@ -502,12 +506,12 @@
 							} else {
 								correct = 'correct rejection';
 							}
-							//console.log('trial response was: '+correct);
+							//console_log('trial response was: '+correct);
 							jsPsych.data.addDataToLastTrial({correct: correct});
 						}
 					}
-					//console.log('nextTimelineTrial');
-					//console.log(nextTimelineTrial);
+					//console_log('nextTimelineTrial');
+					//console_log(nextTimelineTrial);
 					timeline.push(nextTimelineTrial);
 				}
 			}
@@ -527,10 +531,10 @@
 				// Another screen for non-practice trials could go here
 			};
 		}
-		console.log('expanded trials, there are now ' + timeline.length + ' trials in the timeline');
+		console_log('expanded trials, there are now ' + timeline.length + ' trials in the timeline');
 	};
 
-	//console.log(timeline);
+	//console_log(timeline);
 				
 	// ask the subject some questions about the experiment
 	// defining groups of questions that will go together.
@@ -597,7 +601,7 @@ city:'undefined city',ip:'undefined IP'};
     function getSubjectData() {
 
         var trials = jsPsych.data.getTrialsOfType('visdet');
-        console.log('there were '+trials.length + ' trials');
+        console_log('there were '+trials.length + ' trials');
 
         var easy_count_hit = 0;
 		var easy_count_miss = 0;
@@ -634,8 +638,8 @@ city:'undefined city',ip:'undefined IP'};
 							hard_count_false_alarm++; break;
 					}; break;          			
 			}
-			//console.log('loop '+i);
-			console.log(easy_count_hit + ',' + easy_count_miss + ',' + easy_count_false_alarm);
+			//console_log('loop '+i);
+			console_log(easy_count_hit + ',' + easy_count_miss + ',' + easy_count_false_alarm);
 		}
 		var easy_hitrate = easy_count_hit / (easy_count_hit+easy_count_miss);
 		var easy_false_alarm_rate = easy_count_false_alarm / (easy_count_false_alarm+easy_count_correct_rejection);
@@ -668,7 +672,7 @@ city:'undefined city',ip:'undefined IP'};
 		pages: [function() {
             var subject_data = getSubjectData();
 
-            //console.log(subject_data);
+            //console_log(subject_data);
             
             /*var survey_responses_str = "";
             for (var i = 0; i < survey_trials.length; i++) {
@@ -683,7 +687,7 @@ city:'undefined city',ip:'undefined IP'};
 			});
             // save data to disk before feedback is given
             saveData('end');
-            console.log('updating subject file on disk for '+subjectCode);
+            console_log('updating subject file on disk for '+subjectCode);
             updateSubjectSessionFileOnDisk(subjectCode);
             var return_str;
             if (currSession=="practice") {
@@ -712,6 +716,11 @@ city:'undefined city',ip:'undefined IP'};
 		}
 	};
 
+	// console logger (allows central switch of whether we want to log to console for debugging
+	function console_log(msg) {
+		if (log2console==true) {console.log(msg)};
+	}
+	
 	// d' calculator
 	function dprime(hitRate,falseAlarmRate) {
 		zHit = InvNormApprox( hitRate );
@@ -749,6 +758,26 @@ city:'undefined city',ip:'undefined IP'};
 		return( ina_z );
 	}
 	
+	// function to select text on a webpage. Used to automatically select all data on the feedback screen
+	function SelectText(element) {
+		var doc = document
+			, text = doc.getElementById(element)
+			, range, selection
+		;    
+		if (doc.body.createTextRange) {
+			range = document.body.createTextRange();
+			range.moveToElementText(text);
+			range.select();
+		} else if (window.getSelection) {
+			selection = window.getSelection();        
+			range = document.createRange();
+			range.selectNodeContents(text);
+			selection.removeAllRanges();
+			selection.addRange(range);
+		}
+	}
+
+	
 	// data parameter should be either the value of jsPsych.data()
 	// or the parameter that is passed to the on_data_update callback function for the core library
 	// jsPsych.data() contains ALL data
@@ -772,13 +801,13 @@ city:'undefined city',ip:'undefined IP'};
 				sessionPhase: this.sessionPhaseStr,
 			}
 		  },
-		  success: function(output) { console.log('MySQL data write success:'); console.log(output); } // write the result to javascript console
+		  success: function(output) { console_log('MySQL data write success:'); console_log(output); } // write the result to javascript console
 	   });
 	}				
 
     // Function to save experimental data to a CSV file
     function writeDataCSV(filename, filedata) {
-    	console.log('writing data to '+filename);
+    	console_log('writing data to '+filename);
         $.ajax({
             type: 'post',
             cache: false,
@@ -833,7 +862,7 @@ city:'undefined city',ip:'undefined IP'};
 					result = data;
 				},
 				error:function(data){ 		// when request fails, terminate experiment
-					console.log('miserable fail!'+nonCacheableURL);
+					console_log('miserable fail!'+nonCacheableURL);
 					document.write('Error: subject data file '+nonCacheableURL+' not found. Please notify the researcher, including this message.');}
 			});
 			return result;
@@ -868,14 +897,14 @@ city:'undefined city',ip:'undefined IP'};
 
 	function updateSubjectSessionFileOnDisk(subjectName) {
 		// update subject JSON session info
-		console.log('in function updating file info for '+subjectName);
+		console_log('in function updating file info for '+subjectName);
 		if (subjInfo!=undefined){
 				if (subjInfo.length>0){
 					subjInfo[0].next_session++;
 					subjInfo[0].last_session_date = (new Date()).toString();
 					var subjInfoURL = subjectName +'.json';
-					//console.log('writing to '+subjInfoURL);
-					//console.log(JSON.stringify(subjInfo));
+					//console_log('writing to '+subjInfoURL);
+					//console_log(JSON.stringify(subjInfo));
 					writeDataCSV(subjInfoURL,JSON.stringify(subjInfo));
 			}
 		}
@@ -916,11 +945,11 @@ city:'undefined city',ip:'undefined IP'};
 
         // filename of the CSV file is a combination of the (random) subject ID and date string
         if (INFO.saveMethod == 'mysql') {
-			console.log('Saving data to MySQL: '+subj_id_str+' & '+nowString+' & '+sessionPhaseStr);
+			console_log('Saving data to MySQL: '+subj_id_str+' & '+nowString+' & '+sessionPhaseStr);
 			writeDataMySQL(subj_id_str,nowString,sessionPhaseStr)
 		} else {
 			var savePath = subj_id_str + '_S' + session_id_str + '_' + currSession + '_' + nowString + '.csv';
-			console.log('Saving to CSV file: ' + savePath);
+			console_log('Saving to CSV file: ' + savePath);
 			writeDataCSV(savePath, jsPsych.data.dataAsCSV());
         }
     }
@@ -933,7 +962,10 @@ city:'undefined city',ip:'undefined IP'};
 			// save data to disk at end of experiment. Note: 'data/' will be prepended automatically before the filename when saveData is called
 			//    on_finish: present feedback
 			on_finish: function() {
-			  //jsPsych.data.displayData();
+			  if (subjects2GiveFeedback.indexOf(subjectCode)>-1)
+			   {jsPsych.data.displayData('json');
+			   SelectText('jspsych-data-display'); // select displayed text for copying into e-mail (for selected subjects
+			   }
 			}			
 		});
     }
