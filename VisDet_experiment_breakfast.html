@@ -23,7 +23,6 @@
 <body>
 </body>
 <script>
-    // !!! (at the moment, pick this manually), otherwise randomly choose whether this will be an easy or hard session at the start of the experiment
     var currSession; // = 'hard'; //jsPsych.randomization.sample(['easy', 'hard'], 1)[0];
 	var sessionStartTime = new Date().getTime();
 	var allErrors = ''; 	// string in which error messages will be posted
@@ -79,11 +78,11 @@
         nImgMasks2Preload: 30,
         nImgPerCategory2Preload: 15,
         nPracticeTrials: 10,
-		saveMethod: 'csv',
+		saveMethod: 'csv', // save to CSV ('csv'), Mysql ('mysql') or both ('both')?
 		getIP: false, 	// should we check IP address? (warning:seems to trigger ad blockers )
 		displayTimeTriggers: false, 	// controls whether internal time (of phone/pc) is shown on the screen at the start and end of experiment, used as time triggers to synchronise (only necessary when doing task in the lab)
         respLetterLocation: 4,  // obsolete? location of category letter (for img/G35.jpg    
-        task_version: 1.02, 	// version number of task
+        task_version: 1.03, 	// version number of task
 	};
     //console_log(INFO);
 
@@ -463,6 +462,7 @@
 
 		// expand trial list into separate subtrials
 		var currTrial;
+		var totalSubTrialNr=0;
 		for (var iBlock = 0; iBlock < trialBlocks.length; iBlock++) {
 			for (var iTrial = 0;iTrial < trialBlocks[iBlock].length; iTrial++) {
 				// each trial starts with response instructions
@@ -477,6 +477,7 @@
 						mask: currTrial.subTrialMasks[iSubTrial],
 						choices: ['F'], // do we need this?
 						response_ends_trial: false, // should a trial be terminated upon response?
+						total_subtrial_nr: totalSubTrialNr,
 						cont_key: 'mouse',
 						timing_stim: currTrial.dur_stimulus, // display 
 						timing_response: currTrial.dur_stimulus + currTrial.dur_mask,
@@ -491,7 +492,7 @@
 							response_category: currTrial.response_category,
 							trial_difficulty: currTrial.trial_difficulty,
 							trial_startdate: currTrial.start_date,
-							trial_enddate: currTrial.end_date,
+							trial_enddate: currTrial.end_date,							
 						},
 					
 						// on finishing each stimulus, determine the correctness of the response
@@ -508,11 +509,18 @@
 							}
 							//console_log('trial response was: '+correct);
 							jsPsych.data.addDataToLastTrial({correct: correct});
+							// if we're almost done, save data to disk (for safety)							
+							if (jsPsych.currentTrial().total_subtrial_nr==totalSubTrialNr-2)
+							 {
+								console_log('The End Is Near!!!');
+								saveData('endisnear');
+							}
 						}
 					}
 					//console_log('nextTimelineTrial');
 					//console_log(nextTimelineTrial);
 					timeline.push(nextTimelineTrial);
+					totalSubTrialNr++;
 				}
 			}
 			if (currSession=="practice") {
@@ -782,9 +790,10 @@ city:'undefined city',ip:'undefined IP'};
 	// or the parameter that is passed to the on_data_update callback function for the core library
 	// jsPsych.data() contains ALL data
 	// the callback function will contain only the most recently written data.
-	function writeDataMySQL(subj_id_str,nowString,sessionPhaseStr){
+	function writeDataMySQL(session_str,csv_data){
 	
-	   var data_table = "OP3_test"; // change this for different experiments
+	   var data_table = "OP3_data"; // change this for different experiments
+
 	   $.ajax({
 		  type:'post',
 		  cache: false,
@@ -793,13 +802,8 @@ city:'undefined city',ip:'undefined IP'};
 		  // replace 'key' with the column name, and 'value' with the value.
 		  data: {
 			  table: data_table,
-			  json: JSON.stringify(jsPsych.data),
-			  // change the opt_data line to include any data you want to append to the table, such as a subject ID (or remove this line entirely if you have no additional data)
-			  opt_data: {
-				subj_idx: subj_id_str,
-				saveDate: this.nowString,
-				sessionPhase: this.sessionPhaseStr,
-			}
+			  session: session_str,
+			  csv: csv_data,
 		  },
 		  success: function(output) { console_log('MySQL data write success:'); console_log(output); } // write the result to javascript console
 	   });
@@ -946,11 +950,20 @@ city:'undefined city',ip:'undefined IP'};
         // filename of the CSV file is a combination of the (random) subject ID and date string
         if (INFO.saveMethod == 'mysql') {
 			console_log('Saving data to MySQL: '+subj_id_str+' & '+nowString+' & '+sessionPhaseStr);
-			writeDataMySQL(subj_id_str,nowString,sessionPhaseStr)
-		} else {
+			var savePath = subj_id_str + '_S' + session_id_str + '_' + currSession + '_' + nowString + '.csv';
+			csvData = jsPsych.data.dataAsCSV();
+			writeDataMySQL(savePath,csvData)
+		} else if (INFO.saveMethod == 'csv') {
 			var savePath = subj_id_str + '_S' + session_id_str + '_' + currSession + '_' + nowString + '.csv';
 			console_log('Saving to CSV file: ' + savePath);
-			writeDataCSV(savePath, jsPsych.data.dataAsCSV());
+			csvData = jsPsych.data.dataAsCSV();
+			writeDataCSV(savePath,csvData);
+        } else {
+			var savePath = subj_id_str + '_S' + session_id_str + '_' + currSession + '_' + nowString + '.csv';
+			console_log('Saving to CSV file AND to MySQL database: ' + savePath);
+			csvData = jsPsych.data.dataAsCSV();
+			writeDataCSV(savePath, csvData);
+			writeDataMySQL(savePath, csvData)
         }
     }
 
