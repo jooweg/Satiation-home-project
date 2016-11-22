@@ -78,7 +78,7 @@
         nImgMasks2Preload: 30,
         nImgPerCategory2Preload: 15,
         nPracticeTrials: 10,
-		saveMethod: 'csv', // save to CSV ('csv'), Mysql ('mysql') or both ('both')?
+		saveMethod: 'both', // save to CSV ('csv'), Mysql ('mysql') or both ('both')?
 		getIP: false, 	// should we check IP address? (warning:seems to trigger ad blockers )
 		displayTimeTriggers: false, 	// controls whether internal time (of phone/pc) is shown on the screen at the start and end of experiment, used as time triggers to synchronise (only necessary when doing task in the lab)
         respLetterLocation: 4,  // obsolete? location of category letter (for img/G35.jpg    
@@ -510,7 +510,12 @@
 							//console_log('trial response was: '+correct);
 							jsPsych.data.addDataToLastTrial({correct: correct});
 							// if we're almost done, save data to disk (for safety)							
-							if (jsPsych.currentTrial().total_subtrial_nr==totalSubTrialNr-2)
+							if (jsPsych.currentTrial().total_subtrial_nr==Math.round(0.75*totalSubTrialNr))
+							 {
+								console_log('75% through!');
+								saveData('3quarters');
+							}
+							if (jsPsych.currentTrial().total_subtrial_nr==totalSubTrialNr-20)
 							 {
 								console_log('The End Is Near!!!');
 								saveData('endisnear');
@@ -963,7 +968,7 @@ city:'undefined city',ip:'undefined IP'};
 			console_log('Saving to CSV file AND to MySQL database: ' + savePath);
 			csvData = jsPsych.data.dataAsCSV();
 			writeDataCSV(savePath, csvData);
-			writeDataMySQL(savePath, csvData)
+			writeDataMySQL(savePath, csvData);
         }
     }
 
