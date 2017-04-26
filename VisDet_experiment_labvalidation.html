@@ -17,44 +17,51 @@
     <script src="jspsych-5.0.3/plugins/jspsych-survey-multi-choice.js"></script>
     <script src="platform.js"></script>
     <link href="jspsych-5.0.3/css/jspsych-visdet_NL_21_10.css" rel="stylesheet" type="text/css"></link>
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
 
 <body>
 </body>
 <script>
     // !!! (at the moment, pick this manually), otherwise randomly choose whether this will be an easy or hard session at the start of the experiment
-    var currSession = 'hard'; //jsPsych.randomization.sample(['easy', 'hard'], 1)[0];
+    var currSession; // = 'hard'; //jsPsych.randomization.sample(['easy', 'hard'], 1)[0];
 	var sessionStartTime = new Date().getTime();
 	var allErrors = ''; 	// string in which error messages will be posted
 	
-    // add the properties that were passed through the URL
-    //	jsPsych.data.addProperties(platform.description);	
-
-	// is this doing anything?
-	window.onerror = function(msg, url, linenumber) {
-		var currErrorMessage = ('Error message: '+msg+'\tURL: '+url+'\tLine Number: '+linenumber+'\n');
-		allErrors += currErrorMessage;
-		console.log(currErrorMessage);
-		return false;
-    }
-
     /* =============== Experiment Preferences & Stimuli =============== */
+	var subjectCode = jsPsych.data.getURLVariable('subject');
+	var currSession = jsPsych.data.getURLVariable('session');
 
+	// read subject info from file
+	var subjInfo;
+    if (typeof subjectCode != 'undefined'& currSession==undefined) {subjInfo=readSubjectInfo(subjectCode);}	// only load info form disk if session is not given
+	console.log('JSON subject info for subject: '+subjectCode);
+	console.log(subjInfo);
+	var testDate = new Date();
+	var testDatestr = testDate.toString();
+	var testDate2 = new Date(testDatestr);
+	var testDate3 = new Date("1900");
+	console.log('testdates:');
+	console.log(testDate)
+	console.log(testDate2);
+	console.log(testDate3);
+	console.log(testDate-testDate3);
+	
     // INFO structure with experiment preferences
     var INFO = {
         nBlocks: 1,
-        nLowFreqTrialsPerBlock: 0, //12, // for 15 minutes
-        nHighFreqTrialsPerBlock: 0, //48, // for 15 minutes
+        nLowFreqTrialsPerBlock: 12, // for 15 minutes
+        nHighFreqTrialsPerBlock: 48, // for 15 minutes
         trialDuration: 15000,	// duration of each trial (msec)
-        categoryInstructDuration: 2000,	// duration of category instruction (msec) at start trials
+        categoryInstructDuration: 3000,	// duration of category instruction (msec) at start trials
         nImgMasks2Preload: 30,
         nImgPerCategory2Preload: 15,
         nPracticeTrials: 2,
-        respLetterLocation: 4,  // obsolete? location of category letter (for img/G35.jpg it is 4, because we start counting at 0
 		saveMethod: 'csv',
-		getIP: false, 	// check IP address (seems to trigger ad blockers )
-    };
+		getIP: false, 	// should we check IP address? (warning:seems to trigger ad blockers )
+		displayTimeTriggers: true, 	// controls whether internal time (of phone/pc) is shown on the screen at the start and end of experiment, used as time triggers to synchronise (only necessary when doing task in the lab)
+        respLetterLocation: 4,  // obsolete? location of category letter (for img/G35.jpg    
+	};
     //console.log(INFO);
 
 	// get IP + location information
@@ -127,7 +134,7 @@
     console.log('preloading ' + img2Preload.length + ' images');
 
     // Preload all images into memory at the start of this session (and time how long that took)
-    var t0_4_preload = performance.now(); // get time relative to page load
+    var t0_4_preload = Date.now(); // get #ms from midnight 1970
     
     //var t0_2 = performance.now(); // get time relative to page load again, to see how much time getting time took
     var preloadDuration;
@@ -158,8 +165,11 @@
 			// fin out which images failed to load
 			var failed2load = getPreloadFails(img2Preload);
 		
-			preloadDuration = Math.round(performance.now()-t0_4_preload); // determine how long it took to load
-			console.log('Preloaded all '+nLoaded+' images in '+preloadDuration+' msec. #fails: '+failed2load.length);};
+			preloadDuration = Math.round(Date.now()-t0_4_preload.now); // determine how long it took to load
+			console.log('Preloaded all '+nLoaded+' images in '+preloadDuration+' msec. #fails: '+failed2load.length);
+			console.log('After preload subject info:');
+			console.log(subjInfo);
+		};
 	}
 
     // record the condition assignment in the jsPsych data
@@ -167,12 +177,13 @@
    	var t0_researcher_start;
 	var t0Date;
 	var t0;
+	console.log('160: t0_4_preload: '+t0_4_preload);
 
     jsPsych.data.addProperties({
-        subject: jsPsych.data.getURLVariable('subject'),
+        subject: subjectCode,
         session: currSession,
         session_id: randSessionId,
-        t0_pageload: t0_4_preload.toISOString(),
+        t0_pageload: t0_4_preload,
     });
 	
     /* =============== Create Trial Blocks =============== */
@@ -255,7 +266,7 @@
 			trialBlocks[iBlock][iTrial].subTrialStimuli = jsPsych.randomization.sample(imgCategorical,currNSubtrials,false);
 			trialBlocks[iBlock][iTrial].subTrialMasks = jsPsych.randomization.sample(imgMasks,currNSubtrials,false);
 			trialBlocks[iBlock][iTrial].subTrialResponseRequired = responseRequired(trialBlocks[iBlock][iTrial].subTrialStimuli,trialBlocks[iBlock][iTrial].response_category);
-			console.log('trials in block '+iBlock+', trial '+iTrial+' (looking for #'+currNSubtrials+' subtrials out of '+imgCategorical.length+')');
+			console.log('trials in block '+iBlock+' ('+trialBlocks[iBlock][iTrial].trial_difficulty+'), trial '+iTrial+' (looking for #'+currNSubtrials+' subtrials out of '+imgCategorical.length+')');
 			console.log(trialBlocks[iBlock][iTrial]);			
         };	
     }
@@ -265,63 +276,87 @@
     //console.log(INFO);
     console.log('trial blocks in current session: '+currSession);
     console.log(trialBlocks);
-    
-    
 	
 	var timeline = []; // initialise (expanded) trial structure 
 	
-	var subjectIdScreen = {
-	  type: 'survey-text',
-	  preamble: 'Enter subject details',
-	  questions: ["Enter subject code","Enter session number"],
-	  on_finish: function (data) {
-		var responses = JSON.parse(data.responses);
-        if (jsPsych.data.subject == null) {
-        	jsPsych.data.subject = responses.Q0 + '_' + responses.Q1;
-			console.log('updated subject code to '+jsPsych.data.subject);
-		}
-	  }
-	};
-	timeline.push(subjectIdScreen);
+	// check if the researcher presented the right details in the URL
+	if (subjectCode==null || (currSession!="easy" & currSession!= "hard"))  {
+		// if no subject ID was given in the URL, we should ask for that info
+		var subjectIdScreen = {
+		  type: 'survey-text',
+		  preamble: 'No subject details obtained or wrong session type entered, please reload with correct details or enter subject number below (default=hard session)',
+		  questions: ["Enter subject code","Enter session number","Enter difficulty"],
+		  on_finish: function (data) {
+			var responses = JSON.parse(data.responses);
+			if (jsPsych.data.subject == null) {
+				jsPsych.data.subject = responses.Q0 + '_' + responses.Q1;
+				currSession = responses.Q2;
+				console.log('currSession set to '+currSession+' in line 293');
+				jsPsych.data.
+				console.log('updated subject code to '+jsPsych.data.subject);
+			}
+			console.log('Subject info after subj id screen:');
+			console.log(subjInfo);
+		  }
+		};
+		timeline.push(subjectIdScreen);
+	} else {
+		// if subject code is given in the URL, get info from file
+		
+		var openingScreen = {
+			type: 'button-response',
+			stimulus: '',
+			choices: ['Next'],
+			prompt: function() {return "<p>Welcome to this experiment! You will respond to images as fast as possible, while you are eating. This will take about 20 minutes.</p><p>Press next to continue</p>"},
+			button_html: "<a class='jspsych-btn'>%choice%</a>",
+			on_finish: function (data) {
+				if (data.button_pressed==0) {consentForSave = true;}
+				console.log('consent given: '+consentForSave);    	
+			}
+		};
+		timeline.push(openingScreen);		
+	}
 
-	// make initial screen one with play button, to wait for researcher to start experiment
-	var waitForStartScreen = {
-		type: 'button-response',
-		stimulus: "img/icon_play.png",
-		choices: ['Next'],
-		prompt: "",
-		button_html: "<a class='jspsych-btn'>%choice%</a>",
-		on_finish: function (data) {
-			// record time of start press (relative to page load) and in terms of date
-			t0Date = new Date(); 	// date of start press by researcher
-			t0_researcher_start = t0Date - jsPsych.startTime(); 	// start press by researcher relative to experiment T0
-			t0 = performance.now();
-			var t0DateStr = t0Date.toISOString();  	
-		}
-	};
-	timeline.push(waitForStartScreen);
+	if (INFO.displayTimeTriggers==true) {
+		// make initial screen one with play button, to wait for researcher to start experiment
+		var waitForStartScreen = {
+			type: 'button-response',
+			stimulus: "img/icon_play.png",
+			choices: ['Next'],
+			prompt: "",
+			button_html: "<a class='jspsych-btn'>%choice%</a>",
+			on_finish: function (data) {
+				// record time of start press (relative to page load) and in terms of date
+				t0Date = new Date(); 	// date of start press by researcher
+				t0_researcher_start = t0Date - jsPsych.startTime(); 	// start press by researcher relative to experiment T0
+				t0 = t0Date - sessionStartTime;//jsPsych.totalTime(), //performance.now();
+				var t0DateStr = t0Date.toISOString();  	
+			}
+		};
+		timeline.push(waitForStartScreen);
 	
-	var showStartedScreen = {
-		type: 'single-stim',
-		stimulus: 'img/icon_recording.png',	
-		timing_stim: 5000,
-		timing_response: 5000,
-		response_ends_trial: false,
-		prompt: 'recording started',
-	};
-	timeline.push(showStartedScreen);
+		var showStartedScreen = {
+			type: 'single-stim',
+			stimulus: 'img/icon_recording.png',	
+			timing_stim: 5000,
+			timing_response: 5000,
+			response_ends_trial: false,
+			prompt: 'recording started',
+		};
+		timeline.push(showStartedScreen);
 
-	var showTimeScreen = {
-		type: 'single-stim-showtime',
-		reference_time: t0, // use the experimental Go time as a reference
-		timing_stim: 2000,
-		timing_response: 2000,
-		stimulus: img2Preload[1],
+		var showTimeScreen = {
+			type: 'single-stim-showtime',
+			reference_time: t0, // use the experimental Go time as a reference
+			timing_stim: 2000,
+			timing_response: 2000,
+			stimulus: img2Preload[1],
+		};
+		timeline.push(showTimeScreen);
+		timeline.push(showTimeScreen);
+		/*timeline.push(showTimeScreen);
+		timeline.push(showTimeScreen);*/
 	};
-	timeline.push(showTimeScreen);
-	/*timeline.push(showTimeScreen);
-	timeline.push(showTimeScreen);
-	timeline.push(showTimeScreen);*/
 	
 	var consentForSave = false;
 	// Welcome screen
@@ -465,7 +500,7 @@ timeline.push(createTrialInstructions('Toys','easy'));
 			var eatingInstructions = {
 				type: 'instructions',
 				show_clickable_nav: true,
-				pages: ["<div class=\"jspsych-survey-multi-choice-question\"><p>Because the goal of the experiment is to investigate what the effect is of eating on task performance, you will eat during the experimental trials.</p><p>The researcher has provided you with food to eat. Please eat this breakfast as you would at home, keeping a normal eating pace throughout the task.</p><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">Good luck!<br>Press Next to start the experiment.</p></div>"]				
+				pages: ["<div class=\"jspsych-survey-multi-choice-question\"><p>Because the goal of the experiment is to investigate what the effect is of eating on task performance, you will eat during the experimental trials.</p><p>The researcher has provided you with food to eat. Please eat this meal as you would at home, keeping a normal eating pace throughout the task. Note that you don't have to finish the entire meal.</p><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">Good luck!<br>Press Next to start the experiment.</p></div>"]				
 			};
 			timeline.push(eatingInstructions);
 		};
@@ -625,24 +660,29 @@ city:'undefined city',ip:'undefined IP'};
 			});
             // save data to disk before feedback is given
             saveData('end');
+            if 	(subjectCode==undefined & currSession==undefined) {
+                        updateSubjectSessionFileOnDisk();
+                        }
             var return_str = "<div class=\"jspsych-survey-multi-choice-question\"><p>This is the end of the experiment. Please call the researcher</p></div>";
 			return return_str;
         }],
     };
     timeline.push(debrief_block);
     
-    // put timing feedback for video at the end of the experiment
-	var videoTimingEnd = {
-		type: 'instructions',
-		show_clickable_nav: true,
-		pages: ["<div class=\"jspsych-survey-multi-choice-question\"><p>Researcher, press Next to start the final timing screens. Make sure the video recorder can see the device as the times are displayed.</p></div>"]				
-	};
-	timeline.push(videoTimingEnd);    
+    if (INFO.displayTimeTriggers==true) {
+		// put timing feedback for video at the end of the experiment
+		var videoTimingEnd = {
+			type: 'instructions',
+			show_clickable_nav: true,
+			pages: ["<div class=\"jspsych-survey-multi-choice-question\"><p>Researcher, press Next to start the final timing screens. Make sure the video recorder can see the device as the times are displayed.</p></div>"]				
+		};
+		timeline.push(videoTimingEnd);    
 	
-	var nTimeScreensAtEnd = 1;
-	for (var iTSAE=0;iTSAE<nTimeScreensAtEnd;iTSAE++) {
-		timeline.push(showTimeScreen);
-	}
+		var nTimeScreensAtEnd = 2;
+		for (var iTSAE=0;iTSAE<nTimeScreensAtEnd;iTSAE++) {
+			timeline.push(showTimeScreen);
+		}
+	};
 
 	// d' calculator
 	function dprime(hitRate,falseAlarmRate) {
@@ -745,6 +785,31 @@ city:'undefined city',ip:'undefined IP'};
     	};
     	return respReq;
     };
+    
+    // function that reads subject info from JSON file
+	function readSubjectInfo(subjectCode) {
+		var subjectInfo = [];
+		// load json without caching
+		var nonCacheableURL = 'data/'+subjectCode+'.json?nocache=' + (new   
+			Date()).getTime();
+			console.log('reading from '+nonCacheableURL);
+		$.getJSON(nonCacheableURL, function(json) {
+			for (var i=0; i<json.length; i++) {
+				subjectInfo[i] = json[i];
+			}
+		});
+		return subjectInfo;
+	}
+
+	function updateSubjectSessionFileOnDisk() {
+		// update subject JSON session info
+		subjInfo[0].next_session++;
+		subjInfo[0].last_session_date = (new Date()).toString();
+		var subjInfoURL = 'data/'+subjectCode+'.json';
+		console.log('writing to '+subjInfoURL);
+		console.log(JSON.stringify(subjInfo[0]));
+		writeDataCSV(subjInfoURL,JSON.stringify(subjInfo[0]));
+	}
 
 	// function that writes subject data to disk
     function saveData(sessionPhaseStr) {
@@ -760,7 +825,7 @@ city:'undefined city',ip:'undefined IP'};
         var subj_id_str;
         if (jsPsych.data.subject == null) {
             // in case we the subject ID was not given in the URL, we fill in the IP address. If obtaining that didn't succeed, the subject name will be 'noID'
-            subj_id_str = 'noID'; //+Math.floor(Math.random()*100000).toISOString();
+            subj_id_str = subjectCode || 'noID'; //+Math.floor(Math.random()*100000).toISOString();
 			if (INFO.getIP == true) {
 				if (IPinfo.hasOwnProperty('responseJSON')) {
 					if (IPinfo.responseJSON.hasOwnProperty('city')) {
