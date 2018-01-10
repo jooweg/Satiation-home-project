@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+	<head>
+		<title>
+			@home spoon instruction
+		</title>
+<!-- [JW] external scripts are loaded in sequential order, so starting with the script that generates the file list should work (https://stackoverflow.com/questions/19035/javascript-load-order) -->
+<!--<script src> -->
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js">
+		</script>
+		<script src="jspsych-5.0.3/jspsych.js">
+		</script>
+		<script src="jspsych-5.0.3/plugins/jspsych-text.js">
+		</script>
+		<script src="jspsych-5.0.3/plugins/jspsych-instructions.js">
+		</script>
+		<script src="jspsych-5.0.3/plugins/jspsych-single-stim.js">
+		</script>
+		<link href="jspsych-5.0.3/css/jspsych-visdet_NL_21_10.css" rel="stylesheet" type="text/css"> </link>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /> 
+	</head>
+  <body>
+    <div id="jspsych-target"></div>
+  </body>
+  <script>
+		var currSession; // = 'hard'; //jsPsych.randomization.sample(['easy', 'hard'], 1)[0];
+		var debugSession = false;
+		var log2console = true; 	// boolean to set whether we should print to the console
+		var sessionStartTime = new Date().getTime();
+		var allErrors = ''; 	// string in which error messages will be posted
+
+		/* =============== Experiment Preferences & Stimuli =============== */
+		var subjectCode = jsPsych.data.getURLVariable('subject') || "sub999"; 	// sub999 is the default subject code
+		var currSession = jsPsych.data.getURLVariable('session');
+		var experimentVersion = jsPsych.data.getURLVariable('experimentVersion') || "atHomePilot";		// atHomePilot is default
+
+		// read subject info from file
+		var subjInfo;
+		subjInfo=readSubjectInfo(experimentVersion,subjectCode);
+		console_log('JSON subject info for subject: '+subjectCode + ' (length: '+subjInfo.length+')');
+		console_log(subjInfo);
+
+		if (subjInfo != undefined) { 	// checks to make sure subjInfo is of expected format
+			if (subjInfo.length>0) {
+				if (subjInfo[0].next_session==0) {currSession = 'practice';}
+				else if (subjInfo[0].difficulty_order[subjInfo[0].next_session-1]=='E') {currSession = 'easy'}
+				else if (subjInfo[0].difficulty_order[subjInfo[0].next_session-1]=='H') {currSession = 'hard'}
+				console_log('Based on JSON subjInfo, this is session '+subjInfo[0].next_session+' with diffidculty '+currSession);
+				var lastSessionDate = new Date(Date.parse(subjInfo[0].last_session_date));
+				var hoursPassed = (sessionStartTime-lastSessionDate)/3600000; 	// calculate #hours since last session
+				var exactSameDay = ((new Date(sessionStartTime)).getDay()==lastSessionDate.getDay())&&(hoursPassed<24); 	// check if last session was also today
+				console_log('The last session was '+hoursPassed+ ' hours ago and was today: '+exactSameDay);
+		
+				if (subjInfo[0].next_session > subjInfo[0].difficulty_order.length) {
+					// when all planned experimental session have been finished, don't start a new one
+					sessionCanStart = false; 	// cancel start of experiment
+					sessionCannotStartStr = 'You have finished all planned sessions. Thank you for participating!';			
+				} else if (exactSameDay==true) {
+					// when the previous session was today, stop the experiment and inform the participant
+					sessionCanStart = false; 	// cancel start of experiment
+					sessionCannotStartStr = 'You have recently finished an experimental session. Please come back when your next session is planned.';
+				}
+			} else {
+				console_log('subjInfo was undefined!')
+			}
+		}
+
+		// determine the message to show on screen
+		var onScreenInstructions;		
+		if (subjInfo.length==0) {
+				// when no subject info was read from file
+				onScreenInstructions= '<p>Something went wrong. Please contact the researcher: <a href="mailto:satisfaction.home@donders.ru.nl">satisfaction.home@donders.ru.nl</p>';			
+		} else {
+			currSession =  currSession || 'practice'; 	// in case no match was found, default to practice session
+			subjectCode = subjectCode.toLowerCase();
+			currSession = currSession.toLowerCase();
+			console_log('read subject subject playlist for session #'+subjInfo[0].next_session+' from file: SubjectCode '+subjectCode+', currSession '+currSession);
+				
+			// get the current spoon settings from the playlist file and present on screen
+			var currSpoonSize = subjInfo[0].spoonsize_order[subjInfo[0].next_session-1];
+			var currSpoonSizeStr;
+			if (currSpoonSize=='S') {
+				currSpoonSizeStr = 'SMALL';
+			} else {
+				currSpoonSizeStr = 'LARGE';			
+			}
+		
+			onScreenInstructions= '<p>During this session, please eat with the '+currSpoonSizeStr+' spoon.</p><p style="font-size:0.7em">(after reading this message, please close this window with the button below)';
+		}
+
+	  var block = {
+		 type: 'text',
+		 text: onScreenInstructions//'Welcome to the experiment. Press any key to begin.'
+	  }
+
+	  jsPsych.init({
+		 display_element: $('#jspsych-target'),
+		 timeline: [block],
+		 on_finish: function() { jsPsych.data.displayData(); }
+	  });
+
+		// function that reads subject session info from JSON file
+		function readSubjectInfo(experimentVersion,subjectCode) {
+			var subjectInfo = [];
+			// make sure we wait until the data is loaded
+			$.ajaxSetup({
+				async: false
+			});
+				// load json without caching (so that the browser will always ask for the newest version)
+			var nonCacheableURL = 'playlists/'+experimentVersion+'_'+subjectCode+'.json?nocache=' + (new   
+				Date()).getTime();
+				//console_log('reading from '+nonCacheableURL);
+			$.getJSON(nonCacheableURL, function(json) {
+				for (var i=0; i<json.length; i++) {
+					subjectInfo[i] = json[i];
+				}
+			});
+			console_log('finished reading from '+nonCacheableURL);
+			return subjectInfo;
+		}
+		
+		function console_log(msg) {
+			if (log2console==true) {console.log(msg)};
+		}
+  </script>
+</html>
