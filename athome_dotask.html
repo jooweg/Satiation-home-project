@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<title>
-			@home visual detection experiment
+			@home experiment
 		</title>
 <!-- [JW] external scripts are loaded in sequential order, so starting with the script that generates the file list should work (https://stackoverflow.com/questions/19035/javascript-load-order) -->
 <!--<script src> -->
@@ -28,9 +28,9 @@
 		</script>
 		<script src="jspsych-5.0.3/plugins/jspsych-survey-text.js">
 		</script>
-		<script src="jspsych-5.0.3/plugins/jspsych-survey-multi-choice.js">
-		</script>
 		<script src="platform.js">
+		</script>
+		<script src="jspsych-5.0.3/plugins/jspsych-survey-multi-choice.js">
 		</script>
 		<link href="jspsych-5.0.3/css/jspsych-visdet_NL_21_10.css" rel="stylesheet" type="text/css"> </link> <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /> 
 	</head>
@@ -39,102 +39,72 @@
 	<script>
 		var currSession; // = 'hard'; //jsPsych.randomization.sample(['easy', 'hard'], 1)[0];
 			var debugSession = false;
-			var log2console = false; 	// boolean to set whether we should print to the console
+			var log2console = true; 	// boolean to set whether we should print to the console
 			var sessionStartTime = new Date().getTime();
 			var allErrors = ''; 	// string in which error messages will be posted
 			
 		/* =============== Experiment Preferences & Stimuli =============== */
-			var subjectCode = jsPsych.data.getURLVariable('subject');
+			var subjectCode = jsPsych.data.getURLVariable('subject') || "sub999"; 	// sub999 is the default subject code
 			var currSession = jsPsych.data.getURLVariable('session');
-			var experimentVersion = jsPsych.data.getURLVariable('experimentVersion');
+			var experimentVersion = jsPsych.data.getURLVariable('experimentVersion') || "atHomePilot";		// atHomePilot is default
+
+			// read subject info from file
+			var subjInfo;
+			subjInfo=readSubjectInfo(experimentVersion,subjectCode);
+			console_log('JSON subject info for subject: '+subjectCode + ' (length: '+subjInfo.length+')');
+			console_log(subjInfo);
+
+			if (subjInfo != undefined) { 	// checks to make sure subjInfo is of expected format
+				if (subjInfo.length>0) {
+					if (subjInfo[0].next_session==0) {currSession = 'practice';}
+					else if (subjInfo[0].difficulty_order[subjInfo[0].next_session-1]=='E') {currSession = 'easy'}
+					else if (subjInfo[0].difficulty_order[subjInfo[0].next_session-1]=='H') {currSession = 'hard'}
+					console_log('Based on JSON subjInfo, this is session '+subjInfo[0].next_session+' with diffidculty '+currSession);
+					var lastSessionDate = new Date(Date.parse(subjInfo[0].last_session_date));
+					var hoursPassed = (sessionStartTime-lastSessionDate)/3600000; 	// calculate #hours since last session
+					var exactSameDay = ((new Date(sessionStartTime)).getDay()==lastSessionDate.getDay())&&(hoursPassed<24); 	// check if last session was also today
+					console_log('The last session was '+hoursPassed+ ' hours ago and was today: '+exactSameDay);
+			
+					if (subjInfo[0].next_session > subjInfo[0].difficulty_order.length) {
+						// when all planned experimental session have been finished, don't start a new one
+						sessionCanStart = false; 	// cancel start of experiment
+						sessionCannotStartStr = 'You have finished all planned sessions. Thank you for participating!';			
+					} else if (exactSameDay==true) {
+						// when the previous session was today, stop the experiment and inform the participant
+						sessionCanStart = false; 	// cancel start of experiment
+						sessionCannotStartStr = 'You have recently finished an experimental session. Please come back when your next session is planned.';
+					}
+				} else {
+					console_log('subjInfo was undefined!')
+				}
+			}
+			currSession =  currSession || 'practice'; 	// in case no match was found, default to practice session
+			subjectCode = subjectCode.toLowerCase();
+			currSession = currSession.toLowerCase();
+			console_log('read subject subject playlist for session #'+subjInfo[0].next_session+' from file: SubjectCode '+subjectCode+', currSession '+currSession);
 		
 			// based on the session information, read a playlist file 
 			var daycode;
 			if (currSession=='easy') daycode = 'ED';
 			else if (currSession=='hard') daycode = 'DD';
-			else console.log('daycode not recognised');		
+			else console_log('daycode not recognised');		
 				
-			playlistJSON = loadPlaylist('./playlists',daycode,4); // chose randomly from 4 playlists
-			pl = playlistJSON.responseJSON.trialdata;
+			playlistJSON = loadTrialPlaylist('./playlists',daycode,4); // chose randomly from 4 playlists
+			playlistInfo = playlistJSON.responseJSON.trialdata;
 			var trial_nr = 0;
-			// [JW] change this to read subject session info (from database?)
-			// read subject info from file
-			var subjInfo;
-		if (typeof subjectCode != 'undefined'& currSession==undefined) {subjInfo=readSubjectInfo(experimentVersion,subjectCode);}	// only load info form disk if session is not given
-			console.log('JSON subject info for subject: '+subjectCode);
-			console.log(subjInfo);
+
 			var testDate = new Date();
 			var testDatestr = testDate.toString();
 			var testDate2 = new Date(testDatestr);
-			console.log('testdates:');
-			console.log(testDate)
-			console.log(testDate2);
-		
-			if (typeof experimentVersion != 'undefined') experimentVersion = '';
-						
-			// function to pick a playlistpath and return contents of the file
-			function loadPlaylist(baseUrl,daycode,nPlaylists2ChooseFrom) {
-				var playlistnum = Math.floor(Math.random() * nPlaylists2ChooseFrom) + 1;
-				var playlistUrl = baseUrl + '/playlist_' + daycode + '_' + ('00'+playlistnum).slice(-3) + '.json';
-				
-				// Set the global configs to synchronous, i.e. wait for the file to load
-				$.ajaxSetup({
-					async: false
-				});
-				var pl = $.getJSON(playlistUrl, function() {
-				  console.log(playlistUrl + ' successfully read from URL');
-				});
-				// Set the global configs back to asynchronous 
-				$.ajaxSetup({
-					async: true
-				});
-				return pl;
-			}
+			console_log('testdates:');
+			console_log(testDate)
+			console_log(testDate2);
 			
-			// get IP + location information
-			var subject_city;
-			var subject_ip;
-			//$(function () {
-			function getIPinfo(){
-				//var IPinfo;
-				var subject_city;
-				var subject_ip;
-				// $ (dollar sign) denotes jquery request
-				var JSONdata;
-				var JSONout = $.getJSON('http://freegeoip.net/json/?callback=?', function (location, textStatus, jqXHR) {
-					//console.log("callback running");
-					//console.log(textStatus);
-					//console.log(jqXHR);
-					if (textStatus == 'success') {
-						subject_city = jqXHR.responseJSON.city;
-						subject_ip = jqXHR.responseJSON.ip;
-						//console.log(jqXHR);
-						//$('#region-name').html(location.region_name);
-					};
-				});
-				return JSONout;
-		/*		console.log('JSON info:');
-				console.log(JSONout);
-				console.log('JSONdata:');
-				console.log(JSONdata);
-				console.log(Object.getOwnPropertyNames(JSONout));
-				console.log(JSONout.getAllResponseHeaders);
-				console.log(JSONout.responseJSON.city);
-				return {
-					subject_city: JSONout.responseJSON.city,
-					subject_ip: JSONout.responseJSON.ip
-					};*/
-			};
-			if (INFO.getIP == true) {
-				var IPinfo = getIPinfo(); // asynchronous request, we'll see at the end of the script if we got a response
-			}
-			//console.log(IPinfo);
-			
-		// [JW] get the list of images to preload from the playlist data
-		var imgFurniture = makeImgPath(pl.imgFurniture);
-		var imgTools = makeImgPath(pl.imgTools);
-		var imgToys = makeImgPath(pl.imgToys);
-		var imgMasks = makeImgPath(pl.imgMasks);
+		// get the list of images to preload from the playlist data
+		var imgFurniture = makeImgPath(playlistInfo.imgFurniture);
+		var imgTools = makeImgPath(playlistInfo.imgTools);
+		var imgToys = makeImgPath(playlistInfo.imgToys);
+		var imgMasks = makeImgPath(playlistInfo.imgMasks);
 		
 		// make a list of all images to preload
 		var img2Preload = imgMasks.slice(0); // clone the masks list
@@ -143,7 +113,7 @@
 		// list of other images to preload
 		var otherImg2Preload = makeImgPath(['icon_play.png','icon_recording.png']);
 		img2Preload = img2Preload.concat(otherImg2Preload); // add the other images
-		console.log('preloading ' + img2Preload.length + ' images');
+		console_log('preloading ' + img2Preload.length + ' images');
 		
 		// Preload all images into memory at the start of this session (and time how long that took)
 		var t0_4_preload = Date.now(); // get #ms from midnight 1970
@@ -163,38 +133,33 @@
 						image.src = imgList[iIm];
 						if (image.complete==false) {failedList.push(imgList[iIm])};
 					};
-				console.log('failed list');
-				console.log(failedList);
+				console_log('failed list');
+				console_log(failedList);
 				return failedList;
 			}
 			function updateLoadedCount(nLoaded){
 				var percentcomplete = nLoaded / img2Preload.length * 100;			
 				// could put something fancier here, like a progress bar
 				// or updating text in the DOM.
-				//console.log('preloaded '+img2Preload[nLoaded]);
+				//console_log('preloaded '+img2Preload[nLoaded]);
 				if (percentcomplete == 100) {
 					// fin out which images failed to load
 					var failed2load = getPreloadFails(img2Preload);
 				
 					preloadDuration = Math.round(Date.now()-t0_4_preload.now); // determine how long it took to load
-					console.log('Preloaded all '+nLoaded+' images in '+preloadDuration+' msec. #fails: '+failed2load.length);
-					console.log('After preload subject info:');
-					console.log(subjInfo);
+					console_log('Preloaded all '+nLoaded+' images in '+preloadDuration+' msec. #fails: '+failed2load.length);
+					console_log('After preload subject info:');
+					console_log(subjInfo);
 				};
-			}
-			
-			// function to find position
-			var findPos = function(arr, char){
-				 return arr.findIndex(function(element, index, array){return element===char});
 			}
 		
 		// record the condition assignment in the jsPsych data
 		// this adds a property called 'subject' and a property called 'condition' to every trial
 		// [JW] this should all go for the home version
-		   	var t0_researcher_start;
+			var t0_researcher_start;
 			var t0Date;
 			var t0;
-			console.log('160: t0_4_preload: '+t0_4_preload);
+			console_log('160: t0_4_preload: '+t0_4_preload);
 		
 		jsPsych.data.addProperties({
 		    subject: subjectCode,
@@ -203,11 +168,41 @@
 		    t0_pageload: t0_4_preload,
 		});
 			
-			// [JW] This should all be removed, because trial structures are loaded from a playlist file.
-		/* =============== Create Trial Blocks =============== */
-		/* Fill test block with the info loaded in the loaded playlist file */
+		// function to find position
+		var findPos = function(arr, char){
+			 return arr.findIndex(function(element, index, array){return element===char});
+		}
 		
-			//// define factors (to fill practice trials)
+		// function to count letters in a string
+		var countLettersInString = function (str, letter) {
+			var count = 0;
+			for (var i=0;i<str.length;i++) {
+				if (str[i]==letter) 	count++;
+			}
+			return count;
+		}
+						
+		/* =============== Create Trial Blocks =============== */
+		/* Fill test block with the info loaded in the loaded trial playlist file */
+		
+		// INFO structure with experiment preferences
+		var INFO = {
+			nBlocks: 1,
+			nLowFreqTrialsPerBlock: Math.min(...[countLettersInString(playlistInfo.trial_difficulty,'L'),countLettersInString(playlistInfo.trial_difficulty,'H')]),
+			nHighFreqTrialsPerBlock: Math.max(...[countLettersInString(playlistInfo.trial_difficulty,'L'),countLettersInString(playlistInfo.trial_difficulty,'H')]),
+			trialDuration: 15000,	// duration of each trial (msec)
+			categoryInstructDuration: 3000,	// duration of category instruction (msec) at start trials
+			//nImgMasks2Preload: 30,
+			//nImgPerCategory2Preload: 15,
+			nPracticeTrials: 2,
+			saveMethod: 'csv',
+			getIP: false, 	// should we check IP address? (warning:seems to trigger ad blockers )
+			displayTimeTriggers: false, 	// controls whether internal time (of phone/pc) is shown on the screen at the start and end of experiment, used as time triggers to synchronise (only necessary when doing task in the lab)
+			respLetterLocation: 4,  // obsolete? location of category letter (for img/G35.jpg    
+			saveProgressAfterTrials: [3,5] 	// trial numbers after which to save an (intermediate) logfile
+		};
+					
+		// define factors (to fill practice trials)
 		var easyFactors = {
 		    response_category: ['Tools', 'Toys', 'Furniture'],
 		    dur_stimulus: [750], // stimulus presentation duration (msec)
@@ -226,7 +221,7 @@
 		var hardTrials = jsPsych.randomization.factorial(hardFactors, 1);
 		var easyTrialNSubtrials = Math.ceil(INFO.trialDuration/(easyTrials[0].dur_stimulus + easyTrials[0].dur_mask));
 		var hardTrialNSubtrials = Math.ceil(INFO.trialDuration/(hardTrials[0].dur_stimulus + hardTrials[0].dur_mask));
-		console.log('# subtrials easy trials: '+easyTrialNSubtrials+'. # subtrials hard trials: '+hardTrialNSubtrials);
+		console_log('# subtrials easy trials: '+easyTrialNSubtrials+'. # subtrials hard trials: '+hardTrialNSubtrials);
 			var currEasyTrials;
 			var currHardTrials;
 			
@@ -265,7 +260,7 @@
 		var plTrialCtr = 0;
 		for (var iBlock = blockOffset; iBlock < INFO.nBlocks+blockOffset; iBlock++) {
 		    // fill the trials in each block with subtrials
-		    //trialsPerBlock = pl.trial_difficulty.length/INFO.nBlocks; !!! place this back
+		    //trialsPerBlock = playlistInfo.trial_difficulty.length/INFO.nBlocks; !!! place this back
 		    trialsPerBlock = 5; // !!! replace this with the line above
 		    // fill the block with the same trials (will be overwritten later)
 		    trialBlocks[iBlock] = jsPsych.randomization.repeat(easyTrials[0],trialsPerBlock)
@@ -273,12 +268,12 @@
 					// clone trial (to break reference link with other trials
 					trialBlocks[iBlock][iTrial] = $.extend(true,{},easyTrials[0]);
 					// fill subtrials according to playlist
-					trialBlocks[iBlock][iTrial].subTrialStimuli = makeImgPath(pl.subTrialStimuli[plTrialCtr]);
+					trialBlocks[iBlock][iTrial].subTrialStimuli = makeImgPath(playlistInfo.subTrialStimuli[plTrialCtr]);
 					// randomly pick masks from the preloaded set of masks
-					currNSubtrials = pl.subTrialStimuli[plTrialCtr].length;
+					currNSubtrials = playlistInfo.subTrialStimuli[plTrialCtr].length;
 					trialBlocks[iBlock][iTrial].subTrialMasks = jsPsych.randomization.sample(imgMasks,currNSubtrials,false);
 					trialBlocks[iBlock][iTrial].subTrialResponseRequired = false; 
-					if (pl.trial_difficulty[plTrialCtr] == "L") { 
+					if (playlistInfo.trial_difficulty[plTrialCtr] == "L") { 
 						trialBlocks[iBlock][iTrial].trial_difficulty="easy";
 						trialBlocks[iBlock][iTrial].dur_mask = easyFactors.dur_mask[0];
 						trialBlocks[iBlock][iTrial].dur_stimulus = easyFactors.dur_stimulus[0];				
@@ -287,13 +282,13 @@
 						trialBlocks[iBlock][iTrial].dur_mask = hardFactors.dur_mask[0];
 						trialBlocks[iBlock][iTrial].dur_stimulus = hardFactors.dur_stimulus[0];				
 					};
-					if (pl.response_category[plTrialCtr]=="F") {trialBlocks[iBlock][iTrial].response_category="Furniture";}
-					else if (pl.response_category[plTrialCtr]=="G") {trialBlocks[iBlock][iTrial].response_category="Tools";}
+					if (playlistInfo.response_category[plTrialCtr]=="F") {trialBlocks[iBlock][iTrial].response_category="Furniture";}
+					else if (playlistInfo.response_category[plTrialCtr]=="G") {trialBlocks[iBlock][iTrial].response_category="Tools";}
 					else {trialBlocks[iBlock][iTrial].response_category="Toys";}
-					trialBlocks[iBlock][iTrial].WM_response_options = pl.WM_response_options[plTrialCtr];
-					trialBlocks[iBlock][iTrial].WM_correct_response = pl.WM_correct_response[plTrialCtr];
+					trialBlocks[iBlock][iTrial].WM_response_options = playlistInfo.WM_response_options[plTrialCtr];
+					trialBlocks[iBlock][iTrial].WM_correct_response = playlistInfo.WM_correct_response[plTrialCtr];
 					
-					//console.log(trialBlocks[iBlock][iTrial]);			
+					//console_log(trialBlocks[iBlock][iTrial]);			
 					plTrialCtr++;
 		    };	
 		}
@@ -313,12 +308,12 @@
 					if (jsPsych.data.subject == null) {
 						jsPsych.data.subject = responses.Q0 + '_' + responses.Q1;
 						currSession = responses.Q2;
-						console.log('currSession set to '+currSession+' in line 293');
+						console_log('currSession set to '+currSession+' in line 293');
 						//jsPsych.data.
-						console.log('updated subject code to '+jsPsych.data.subject);
+						console_log('updated subject code to '+jsPsych.data.subject);
 					}
-					console.log('Subject info after subj id screen:');
-					console.log(subjInfo);
+					console_log('Subject info after subj id screen:');
+					console_log(subjInfo);
 				  }
 				};
 				timeline.push(subjectIdScreen);
@@ -332,7 +327,7 @@
 					button_html: "<a class='jspsych-btn'>%choice%</a>",
 					on_finish: function (data) {
 						if (data.button_pressed==0) {consentForSave = true;}
-						console.log('consent given: '+consentForSave);    	
+						console_log('consent given: '+consentForSave);    	
 					}
 				};
 				if (debugSession==false) {timeline.push(openingScreen);}
@@ -392,26 +387,10 @@
 				button_html: "<a class='jspsych-btn'>%choice%</a>",
 				on_finish: function (data) {
 					if (data.button_pressed==0) {consentForSave = true;}
-					console.log('consent given: '+consentForSave);    	
+					console_log('consent given: '+consentForSave);    	
 				}
 			};
 		  //if (debugSession==false) {timeline.push(openingScreen);}
-		  
-		/*  //// Questionnaires
-		  // Likert for state craving
-		  var debqQuestions = ["Als u geirriteerd bent, hebt u dan zin om iets te eten?","Als het eten u goed smaakt, eet u dan meer dan u gewend bent?","Als u niets te doen hebt, krijgt u dan zin om iets te eten?"];
-		
-		  // defining two different response scales that can be used.
-		  var debqScale = ["Nooit","Zelden","Soms","Vaak","Zeer vaak"];
-		
-		  var debqScreen = {
-		  type: 'survey-likert-required',
-		  questions: debqQuestions,
-		  labels: [debqScale,debqScale,debqScale], // need one scale for every question on a page
-		  required: [true, true, true]   // set whether questions are required      
-		  };  
-		  timeline.push(debqScreen);
-		  */
 		  
 			var clickableInstructions = {
 				type: 'instructions',
@@ -440,22 +419,17 @@
 						t0_jspsych: jsPsych.startTime(),
 						});
 					saveData('start'); 
-					console.log('experiment start time: '+jsPsych.startTime());		
+					console_log('experiment start time: '+jsPsych.startTime());		
 				},		
 			}
 			if (debugSession==false) {timeline.push(clickableInstructions);}
 			
 			//// Trial part of timeline
 			var nextTimelineTrial;
-			/*// create a practice block
-		timeline.push(createTrialInstructions('Toys','easy'));
-			for (var iSubTrial = 0; iSubTrial < currTrial.subTrialStimuli.length; iSubTrial++) {
-					
-			};*/
 		
 			// expand trial list into separate subtrials
 			var currTrial;
-		for (var iBlock = 0; iBlock < trialBlocks.length; iBlock++) {
+			for (var iBlock = 0; iBlock < trialBlocks.length; iBlock++) {
 				for (var iTrial = 0;iTrial < trialBlocks[iBlock].length; iTrial++) {
 					currTrial = trialBlocks[iBlock][iTrial];
  					// let each trial start with response instructions
@@ -492,8 +466,8 @@
 								jsPsych.data.addDataToLastTrial({trial_nr: trial_nr});
 							}
 						}
-						//console.log('nextTimelineTrial');
-						//console.log(nextTimelineTrial);
+						//console_log('nextTimelineTrial');
+						//console_log(nextTimelineTrial);
 						timeline.push(nextTimelineTrial);
 					} // subtrial loop
 					// present 3AFC question after all stimuli have been presented
@@ -510,8 +484,8 @@
 							correct_n_targets: trialBlocks[iBlock][iTrial].WM_correct_response
 						},
 						on_finish: function (data) {
-							console.log('l 536: data')
-							console.log(data)
+							console_log('l 536: data')
+							console_log(data)
 							var correct = (data.button_pressed == findPos(data.choices,data.correct_n_targets));
 							jsPsych.data.addDataToLastTrial({correct: correct});
 							jsPsych.data.addDataToLastTrial({trial_nr: trial_nr});
@@ -543,49 +517,8 @@
 					timeline.push(eatingInstructions);
 				};
 			}
-			console.log('expanded trials, there are now ' + timeline.length + ' trials in the timeline');
+			console_log('expanded trials, there are now ' + timeline.length + ' trials in the timeline');
 		
-		/*			//// Questions about experiment
-			// defining groups of questions that will go together.
-			var page_1_questions = ["U bent nu klaar met de experimentele <i>trials</i>! Nu volgen nog enkele vragen over de taak<br>Hoe moeilijk vond u de langzame (>) <i>trials</i>?", "Hoe moeilijk vond u de snelle (>>>) <i>trials</i>?"]
-		
-			// definiting two different response scales that can be used.
-			var Q1_options = ["Erg makkelijk", "Een beetje makkelijk", "Makkelijk noch moeilijk", "Een beetje moeilijk", "Erg moeilijk"];
-			var Q2_options = ["Erg makkelijk", "Een beetje makkelijk", "Makkelijk noch moeilijk", "Een beetje moeilijk", "Erg moeilijk"];
-		
-			var multi_choice_page = {
-			  type: 'survey-multi-choice',
-			  questions: page_1_questions,
-			  options: [Q1_options, Q2_options],  // need one scale for every question on a page
-			  required: [true, true]   // set whether questions are required
-			  // horizontal: true  // centres questions and makes options display horizontally
-			};	
-			
-			page_1_questions = ["Denkt u dat de taak moeilijker was omdat u tegelijkertijd aan het eten was?", "Bent u man of vrouw?","Hoe oud bent u?"];
-		
-			var survey_page = {
-			  type: 'survey-text',
-			  questions: page_1_questions,
-		    data: function() {
-		    	var sessionEndTime = new Date().getTime();
-					var survey_page_data = {preloadDuration: preloadDuration,time2CompleteExperiment: sessionEndTime-sessionStartTime,timeAtCompletion: (new Date()).toISOString(),
-		city:'undefined city',ip:'undefined IP'};
-		    	 At this final screen before writing the data to disk, see if the IPinfo promise (javascript term) has returned the IP info. If so, save it to this trial's data 
-		
-					if (INFO.getIP == true) {
-						if (IPinfo.hasOwnProperty('responseJSON')) {
-							if (IPinfo.responseJSON.hasOwnProperty('city')) {
-								survey_page_data.city = IPinfo.responseJSON.city;
-								survey_page_data.ip = IPinfo.responseJSON.ip;
-							}
-						}
-					}
-					return survey_page_data
-				}
-			};	
-			//timeline.push(multi_choice_page);
-			//timeline.push(survey_page);*/
-			
 		// function to create instruction screen at the start of trials
 			function createTrialInstructions(category,difficulty,blocknr) {
 				var speedIndicator;
@@ -602,13 +535,14 @@
 					timing_response: INFO.categoryInstructDuration, // time to present instructions
 					choices: 'none', // no keys are allowed to advance
 					is_html: true,
-					on_finish: function () {trial_nr++;}  // increase the (global) trial number
-
+					on_finish: function () {
+						trial_nr++;		// increase the (global) trial number
+						if (INFO.saveProgressAfterTrials.indexOf(trial_nr)) {saveData('inprogress');}
+					} 
 				}
 				return instruct_trial;
 			}
 			
-
 		// function to obtain subject performance metrics
 		function calcWorkingMemoryPerformance() {
 			var trials = jsPsych.data.getTrialsOfType('button-response-wm');							
@@ -643,7 +577,7 @@
 		function getSubjectData() {
 		
 		    var trials = jsPsych.data.getTrialsOfType('visdet');
-		    console.log('there were '+trials.length + ' trials');
+		    console_log('there were '+trials.length + ' trials');
 		
 		    var easy_count_hit = 0;
 				var easy_count_miss = 0;
@@ -680,8 +614,8 @@
 									hard_count_false_alarm++; break;
 							}; break;          			
 					}
-					//console.log('loop '+i);
-					console.log(easy_count_hit + ',' + easy_count_miss + ',' + easy_count_false_alarm);
+					//console_log('loop '+i);
+					console_log(easy_count_hit + ',' + easy_count_miss + ',' + easy_count_false_alarm);
 				}
 				var easy_hitrate = easy_count_hit / (easy_count_hit+easy_count_miss);
 				var easy_false_alarm_rate = easy_count_false_alarm / (easy_count_false_alarm+easy_count_correct_rejection);
@@ -714,7 +648,7 @@
 				pages: [function() {
 		        var subject_data = getSubjectData();
 		
-		        //console.log(subject_data);
+		        //console_log(subject_data);
 		        
 		        /*var survey_responses_str = "";
 		        for (var i = 0; i < survey_trials.length; i++) {
@@ -732,7 +666,7 @@
 		        if 	(subjectCode==undefined & currSession==undefined) {
 		                    updateSubjectSessionFileOnDisk();
 		                    }
-		        var return_str = "<div class=\"jspsych-survey-multi-choice-question\"><p>This is the end of the experiment. Please call the researcher</p></div>";
+		        var return_str = "<div class=\"jspsych-survey-multi-choice-question\"><p>You finished the trials. Press 'Next' to see your performance relative to others.</p></div>";
 					return return_str;
 		    }],
 		};
@@ -802,7 +736,7 @@
 			// the callback function will contain only the most recently written data.
 			function writeDataMySQL(subj_id_str,nowString,sessionPhaseStr){
 			
-			   var data_table = "OP3_test"; // change this for different experiments
+			   var data_table = experimentVersion;
 			   $.ajax({
 				  type:'post',
 				  cache: false,
@@ -819,7 +753,7 @@
 						sessionPhase: this.sessionPhaseStr,
 					}
 				  },
-				  success: function(output) { console.log('MySQL data write success:'); console.log(output); } // write the result to javascript console
+				  success: function(output) { console_log('MySQL data write success:'); console_log(output); } // write the result to javascript console
 			   });
 			}				
 		
@@ -865,19 +799,44 @@
 			return respReq;
 		};
 		
-		// function that reads subject info from JSON file
+		// function that reads subject session info from JSON file
 			function readSubjectInfo(experimentVersion,subjectCode) {
 				var subjectInfo = [];
-				// load json without caching
-				var nonCacheableURL = 'data/'+experimentVersion+'_'+subjectCode+'.json?nocache=' + (new   
+				// make sure we wait until the data is loaded
+				$.ajaxSetup({
+					async: false
+				});
+
+				// load json without caching (so that the browser will always ask for the newest version)
+				var nonCacheableURL = 'playlists/'+experimentVersion+'_'+subjectCode+'.json?nocache=' + (new   
 					Date()).getTime();
-					console.log('reading from '+nonCacheableURL);
+					//console_log('reading from '+nonCacheableURL);
 				$.getJSON(nonCacheableURL, function(json) {
 					for (var i=0; i<json.length; i++) {
 						subjectInfo[i] = json[i];
 					}
 				});
+				console_log('finished reading from '+nonCacheableURL);
 				return subjectInfo;
+			}
+			
+			// function to pick a playlistpath and return contents of the file
+			function loadTrialPlaylist(baseUrl,daycode,nPlaylists2ChooseFrom) {
+				var playlistnum = Math.floor(Math.random() * nPlaylists2ChooseFrom) + 1;
+				var playlistUrl = baseUrl + '/playlist_' + daycode + '_' + ('00'+playlistnum).slice(-3) + '.json';
+				
+				// Set the global configs to synchronous, i.e. wait for the file to load
+				$.ajaxSetup({
+					async: false
+				});
+				var pl = $.getJSON(playlistUrl, function() {
+				  console_log(playlistUrl + ' successfully read from URL');
+				});
+				// Set the global configs back to asynchronous 
+				$.ajaxSetup({
+					async: true
+				});
+				return pl;
 			}
 		
 			function updateSubjectSessionFileOnDisk() {
@@ -885,8 +844,8 @@
 				subjInfo[0].next_session++;
 				subjInfo[0].last_session_date = (new Date()).toString();
 				var subjInfoURL = 'data/'+subjectCode+'.json';
-				console.log('writing to '+subjInfoURL);
-				console.log(JSON.stringify(subjInfo[0]));
+				console_log('writing to '+subjInfoURL);
+				console_log(JSON.stringify(subjInfo[0]));
 				writeDataCSV(subjInfoURL,JSON.stringify(subjInfo[0]));
 			}
 		
@@ -918,11 +877,11 @@
 		
 		    // filename of the CSV file is a combination of the (random) subject ID and date string
 		    if (INFO.saveMethod == 'mysql') {
-					console.log('Saving data to MySQL: '+subj_id_str+' & '+nowString+' & '+sessionPhaseStr);
+					console_log('Saving data to MySQL: '+subj_id_str+' & '+nowString+' & '+sessionPhaseStr);
 					writeDataMySQL(subj_id_str,nowString,sessionPhaseStr)
 				} else {
 					var savePath = subj_id_str + '_' + nowString + '.csv';
-					console.log('Saving to CSV file: ' + savePath);
+					console_log('Saving to CSV file: ' + savePath);
 					writeDataCSV(savePath, jsPsych.data.dataAsCSV());
 		    }
 		}
@@ -935,7 +894,8 @@
 					// save data to disk at end of experiment. Note: 'data/' will be prepended automatically before the filename when saveData is called
 					//    on_finish: present feedback
 					on_finish: function() {
-					  jsPsych.data.displayData();
+						document.write("<div class=\"jspsych-survey-multi-choice-question\"><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">You finished the task and can press the Close button below to continue.</p></div>");
+					  //jsPsych.data.displayData();
 					}			
 				});
 		}
