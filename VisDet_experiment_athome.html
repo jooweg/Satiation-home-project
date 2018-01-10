@@ -168,7 +168,7 @@
 		var preloadDuration;
 		// generate random number to later stitch start and end logfiles of subjects together
 		var randSessionId = Math.floor((Math.random() * 100000) + 1);
-		document.write("<div class=\"jspsych-survey-multi-choice-question\"><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">Loading data, one moment please...</p></div>");
+		document.write("<div class=\"jspsych-text\"><p class=\"jspsych-text\">Loading data, one moment please...</p></div>");
 			jsPsych.pluginAPI.preloadImages(img2Preload, function(){ startExperiment(); }, function(nLoaded) { updateLoadedCount(nLoaded); });
 			
 		
