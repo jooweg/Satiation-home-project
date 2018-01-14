@@ -260,8 +260,8 @@
 		var plTrialCtr = 0;
 		for (var iBlock = blockOffset; iBlock < INFO.nBlocks+blockOffset; iBlock++) {
 		    // fill the trials in each block with subtrials
-		    //trialsPerBlock = playlistInfo.trial_difficulty.length/INFO.nBlocks; !!! place this back
-		    trialsPerBlock = 5; // !!! replace this with the line above
+		    trialsPerBlock = playlistInfo.trial_difficulty.length/INFO.nBlocks;
+		    //trialsPerBlock = 1; // !!! replace this with the line above
 		    // fill the block with the same trials (will be overwritten later)
 		    trialBlocks[iBlock] = jsPsych.randomization.repeat(easyTrials[0],trialsPerBlock)
 		    for (var iTrial = 0;iTrial < trialsPerBlock; iTrial++) {
@@ -477,7 +477,7 @@
 						choices: trialBlocks[iBlock][iTrial].WM_response_options,
 						prompt: "<p class='center-content'>How many " + trialBlocks[iBlock][iTrial].response_category + " did you see?</p>",
 						button_html: "<a class='jspsych-btn'>%choice%</a>",
-						timing_response: 4500,
+						timing_response: 3500,
 						response_ends_trial: false,
 						data:  {
 							choices: trialBlocks[iBlock][iTrial].WM_response_options,
@@ -661,11 +661,9 @@
 						t0_researcher_start: t0_researcher_start,
 						//subject_data: subject_data,
 					});
-		        // save data to disk before feedback is given
+		        // save data (logfile & session playlist) to disk before feedback is given
 		        saveData('end');
-		        if 	(subjectCode==undefined & currSession==undefined) {
-		                    updateSubjectSessionFileOnDisk();
-		                    }
+				  updateSubjectSessionFileOnDisk();
 		        var return_str = "<div class=\"jspsych-survey-multi-choice-question\"><p>You finished the trials. Press 'Next' to see your performance relative to others.</p></div>";
 					return return_str;
 		    }],
@@ -769,6 +767,19 @@
 		        }
 		    });
 		}
+
+		// Function to update playlist file
+		function writeDataUpdatePlaylist(filename, filedata) {
+		    $.ajax({
+		        type: 'post',
+		        cache: false,
+		        url: 'save_data_update_playlist.php', // this is the path to the PHP script
+		        data: {
+		            filename: filename,
+		            filedata: filedata
+		        }
+		    });
+		}
 		
 		// function that returns URL paths for images (in 'img/')
 		function makeImgPath(inputImgs) {
@@ -843,10 +854,10 @@
 				// update subject JSON session info
 				subjInfo[0].next_session++;
 				subjInfo[0].last_session_date = (new Date()).toString();
-				var subjInfoURL = 'data/'+subjectCode+'.json';
+				var subjInfoURL = experimentVersion+'_session_playlist_'+subjectCode+'.json';
 				console_log('writing to '+subjInfoURL);
-				console_log(JSON.stringify(subjInfo[0]));
-				writeDataCSV(subjInfoURL,JSON.stringify(subjInfo[0]));
+				console_log(JSON.stringify(subjInfo));
+				writeDataUpdatePlaylist(subjInfoURL,JSON.stringify(subjInfo));
 			}
 		
 			// function that writes subject data to disk
