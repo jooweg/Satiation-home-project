@@ -96,7 +96,7 @@
 	  jsPsych.init({
 		 display_element: $('#jspsych-target'),
 		 timeline: [block],
-		 on_finish: function() { jsPsych.data.displayData(); }
+		 on_finish: function() {}
 	  });
 
 		// function that reads subject session info from JSON file
@@ -107,7 +107,7 @@
 				async: false
 			});
 				// load json without caching (so that the browser will always ask for the newest version)
-			var nonCacheableURL = 'playlists/'+experimentVersion+'_'+subjectCode+'.json?nocache=' + (new   
+			var nonCacheableURL = 'playlists/'+experimentVersion+'_session_playlist_'+subjectCode+'.json?nocache=' + (new   
 				Date()).getTime();
 				//console_log('reading from '+nonCacheableURL);
 			$.getJSON(nonCacheableURL, function(json) {
