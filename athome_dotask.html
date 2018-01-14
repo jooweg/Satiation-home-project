@@ -89,7 +89,7 @@
 			else if (currSession=='hard') daycode = 'DD';
 			else console_log('daycode not recognised');		
 				
-			playlistJSON = loadTrialPlaylist('./playlists',daycode,4); // chose randomly from 4 playlists
+			playlistJSON = loadTrialPlaylist('./playlists',daycode,15); // chose randomly from 15 playlists
 			playlistInfo = playlistJSON.responseJSON.trialdata;
 			var trial_nr = 0;
 
@@ -823,7 +823,7 @@
 			// function to pick a playlistpath and return contents of the file
 			function loadTrialPlaylist(baseUrl,daycode,nPlaylists2ChooseFrom) {
 				var playlistnum = Math.floor(Math.random() * nPlaylists2ChooseFrom) + 1;
-				var playlistUrl = baseUrl + '/playlist_' + daycode + '_' + ('00'+playlistnum).slice(-3) + '.json';
+				var playlistUrl = baseUrl + '/' + experimentVersion + '_WM_playlist_' + daycode + '_' + ('00'+playlistnum).slice(-3) + '.json';
 				
 				// Set the global configs to synchronous, i.e. wait for the file to load
 				$.ajaxSetup({
