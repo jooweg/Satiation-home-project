@@ -185,6 +185,10 @@
 		/* =============== Create Trial Blocks =============== */
 		/* Fill test block with the info loaded in the loaded trial playlist file */
 		
+		// Present practice trials the first two sessions
+		var currNPracticeTrials;
+		if (subjInfo[0].next_session < 3) {currNPracticeTrials=2} else {currNPracticeTrials=0};
+
 		// INFO structure with experiment preferences
 		var INFO = {
 			nBlocks: 1,
@@ -194,7 +198,7 @@
 			categoryInstructDuration: 3000,	// duration of category instruction (msec) at start trials
 			//nImgMasks2Preload: 30,
 			//nImgPerCategory2Preload: 15,
-			nPracticeTrials: 2,
+			nPracticeTrials: currNPracticeTrials,
 			saveMethod: 'csv',
 			getIP: false, 	// should we check IP address? (warning:seems to trigger ad blockers )
 			displayTimeTriggers: false, 	// controls whether internal time (of phone/pc) is shown on the screen at the start and end of experiment, used as time triggers to synchronise (only necessary when doing task in the lab)
@@ -323,7 +327,7 @@
 					type: 'button-response',
 					stimulus: '',
 					choices: ['Next'],
-					prompt: function() {return "<p>Welcome to this experiment! You will count images belonging to a certain category, while you are eating. This will just take a few minutes.</p><p>Press next to continue</p>"},
+					prompt: function() {return "<p>Welcome to the session of the home experiment.<br> As you know, you will count images belonging to a certain category, while you are eating.</p><p>Press next to continue</p>"},
 					button_html: "<a class='jspsych-btn'>%choice%</a>",
 					on_finish: function (data) {
 						if (data.button_pressed==0) {consentForSave = true;}
@@ -378,7 +382,7 @@
 			
 			var consentForSave = false;
 		
-			//// Welcome screen
+			// Welcome screen
 			var openingScreen = {
 				type: 'button-response',
 				stimulus: 'img/DONDERS_D_RGB_large.jpg',
@@ -392,36 +396,72 @@
 			};
 		  //if (debugSession==false) {timeline.push(openingScreen);}
 		  
-			var clickableInstructions = {
-				type: 'instructions',
-				pages: [
-				  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">During this experiment, images will be presented of different categories: Toys, Tools and Furniture.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Before a trial starts you will be instructed to which category of image you should count.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Your task is to count the number of occurences of that particular category in the series of images.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to continue.</p></div>',
-				  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Sometimes, the images will follow each other quickly, sometimes this will go slower.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">If three arrows are presented ( >>> ) with the category instruction, this means that this is a FAST trial.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">If only one arrow  ( > ) is presented this means this will be a SLOW trial.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to continue.</p></div>',
-				  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Before the experiment really starts, you will briefly practice the task.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Please do not start eating during these practice trials.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Click Next to start the practice trials. Afterwards, you will receive feedback on how well you performed.</p></div>',
-				],
-				show_clickable_nav: true,
-				data: function (){
-					var instructions_data = {preloadDuration: preloadDuration,platform: platform.description,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
-					if (INFO.getIP == true) {
-						if (IPinfo.hasOwnProperty('responseJSON')) {
-							if (IPinfo.responseJSON.hasOwnProperty('city')) {
-								instructions_data.city = IPinfo.responseJSON.city;
-								instructions_data.ip = IPinfo.responseJSON.ip;
+		  // During the first two session, present the long instructions and practice trials
+		  
+			if (INFO.nPracticeTrials>0) {
+				// In the first sessions, present instructions and practice trials
+				var clickableInstructions = {
+					type: 'instructions',
+					pages: [
+					  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice"><i>The first few session of the home sessions, these instructions plus a short practice will be presented.</i></p><p class="jspsych-survey-multi-choice-text survey-multi-choice">During this experiment, images will be presented of different categories: Toys, Tools and Furniture.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Before a trial starts you will be instructed to which category of image you should count.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Your task is to count the number of occurences of that particular category in the series of images.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to continue.</p></div>',
+					  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Sometimes, the images will follow each other quickly, sometimes this will go slower.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">If three arrows are presented ( >>> ) with the category instruction, this means that this is a FAST trial.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">If only one arrow  ( > ) is presented this means this will be a SLOW trial.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to continue.</p></div>',
+					  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Before the experiment really starts, you will briefly practice the task.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Please do not start eating during these practice trials.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Click Next to start the practice trials. Afterwards, you will receive feedback on how well you performed.</p></div>',
+					],
+					show_clickable_nav: true,
+					data: function (){
+						var instructions_data = {preloadDuration: preloadDuration,platform: platform.description,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
+						if (INFO.getIP == true) {
+							if (IPinfo.hasOwnProperty('responseJSON')) {
+								if (IPinfo.responseJSON.hasOwnProperty('city')) {
+									instructions_data.city = IPinfo.responseJSON.city;
+									instructions_data.ip = IPinfo.responseJSON.ip;
+								}
 							}
 						}
-					}
-					return instructions_data	
-				},
+						return instructions_data	
+					},
 		
-				on_finish: function () {
-					jsPsych.data.addProperties({
-						t0_jspsych_date: (jsPsych.startTime()).toISOString(),
-						t0_jspsych: jsPsych.startTime(),
-						});
-					saveData('start'); 
-					console_log('experiment start time: '+jsPsych.startTime());		
-				},		
-			}
+					on_finish: function () {
+						jsPsych.data.addProperties({
+							t0_jspsych_date: (jsPsych.startTime()).toISOString(),
+							t0_jspsych: jsPsych.startTime(),
+							});
+						saveData('start'); 
+						console_log('experiment start time: '+jsPsych.startTime());		
+					},		
+				}
+			} else {
+				// After the first sessions, skip instructions and practice trials
+				var clickableInstructions = {
+					type: 'instructions',
+					pages: [
+					  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to start this session.</p><p>Remember to keep a normal eating pace throughout the task.</p></div>',
+					],
+					show_clickable_nav: true,
+					data: function (){
+						var instructions_data = {preloadDuration: preloadDuration,platform: platform.description,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
+						if (INFO.getIP == true) {
+							if (IPinfo.hasOwnProperty('responseJSON')) {
+								if (IPinfo.responseJSON.hasOwnProperty('city')) {
+									instructions_data.city = IPinfo.responseJSON.city;
+									instructions_data.ip = IPinfo.responseJSON.ip;
+								}
+							}
+						}
+						return instructions_data	
+					},
+		
+					on_finish: function () {
+						jsPsych.data.addProperties({
+							t0_jspsych_date: (jsPsych.startTime()).toISOString(),
+							t0_jspsych: jsPsych.startTime(),
+							});
+						saveData('start'); 
+						console_log('experiment start time: '+jsPsych.startTime());		
+					},		
+				}
+			};
+
 			if (debugSession==false) {timeline.push(clickableInstructions);}
 			
 			//// Trial part of timeline
@@ -512,7 +552,7 @@
 					var eatingInstructions = {
 						type: 'instructions',
 						show_clickable_nav: true,
-						pages: ["<div class=\"jspsych-survey-multi-choice-question\"><p>Because the goal of the experiment is to investigate what the effect is of eating on task performance, you will eat during the experimental trials.</p><p>The researcher has provided you with food to eat. Please eat this meal as you would at home, keeping a normal eating pace throughout the task. Note that you don't have to finish the entire meal.</p><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">Good luck!<br>Press Next to start the experiment.</p></div>"]				
+						pages: ["<div class=\"jspsych-survey-multi-choice-question\"><p>Please keep a normal eating pace throughout the task.</p><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">Good luck!<br>Press Next to start the experiment.</p></div>"]				
 					};
 					timeline.push(eatingInstructions);
 				};
