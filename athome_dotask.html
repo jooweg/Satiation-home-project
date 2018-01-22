@@ -32,7 +32,8 @@
 		</script>
 		<script src="jspsych-5.0.3/plugins/jspsych-survey-multi-choice.js">
 		</script>
-		<link href="jspsych-5.0.3/css/jspsych-visdet_NL_21_10.css" rel="stylesheet" type="text/css"> </link> <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /> 
+		<link href="jspsych-5.0.3/css/jspsych-visdet_NL_21_10.css" rel="stylesheet" type="text/css"> </link>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /> 
 	</head>
 	<body>
 	</body>
@@ -203,7 +204,8 @@
 			getIP: false, 	// should we check IP address? (warning:seems to trigger ad blockers )
 			displayTimeTriggers: false, 	// controls whether internal time (of phone/pc) is shown on the screen at the start and end of experiment, used as time triggers to synchronise (only necessary when doing task in the lab)
 			respLetterLocation: 4,  // obsolete? location of category letter (for img/G35.jpg    
-			saveProgressAfterTrials: [3,5] 	// trial numbers after which to save an (intermediate) logfile
+			saveProgressAfterTrials: [15,30,45,53], 	// trial numbers after which to save an (intermediate) logfile
+			showProgressAfterTrials: [18,36] 	// trial numbers after which to show a progress bar to the participant
 		};
 					
 		// define factors (to fill practice trials)
@@ -425,6 +427,7 @@
 						jsPsych.data.addProperties({
 							t0_jspsych_date: (jsPsych.startTime()).toISOString(),
 							t0_jspsych: jsPsych.startTime(),
+							session_nr: subjInfo[0].next_session,
 							});
 						saveData('start'); 
 						console_log('experiment start time: '+jsPsych.startTime());		
@@ -435,7 +438,7 @@
 				var clickableInstructions = {
 					type: 'instructions',
 					pages: [
-					  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to start this session.</p><p>Remember to keep a normal eating pace throughout the task.</p></div>',
+					  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to start this session.</p><p>Remember to keep a normal eating pace throughout the task and to finish the task, even when you have finished your meal sooner.</p>',
 					],
 					show_clickable_nav: true,
 					data: function (){
@@ -464,14 +467,16 @@
 
 			if (debugSession==false) {timeline.push(clickableInstructions);}
 			
-			//// Trial part of timeline
+			//// (post-practice) Trial part of timeline
 			var nextTimelineTrial;
 		
 			// expand trial list into separate subtrials
 			var currTrial;
+			var currTrailCounter = 0;
 			for (var iBlock = 0; iBlock < trialBlocks.length; iBlock++) {
 				for (var iTrial = 0;iTrial < trialBlocks[iBlock].length; iTrial++) {
 					currTrial = trialBlocks[iBlock][iTrial];
+					currTrailCounter++;
  					// let each trial start with response instructions
 					timeline.push(createTrialInstructions(currTrial.response_category,currTrial.trial_difficulty,iBlock));
 		
@@ -532,6 +537,9 @@
 						}
 					};
 					timeline.push(WM_3AFC);
+					// progress bar update 
+					if (INFO.showProgressAfterTrials.indexOf(currTrailCounter)>=0) {					timeline.push(createProgressUpdate(currTrailCounter,trialBlocks[iBlock].length));
+					}
 				} // trial loop
 				
 				if (iBlock==0 & INFO.nPracticeTrials>0) {
@@ -552,14 +560,14 @@
 					var eatingInstructions = {
 						type: 'instructions',
 						show_clickable_nav: true,
-						pages: ["<div class=\"jspsych-survey-multi-choice-question\"><p>Please keep a normal eating pace throughout the task.</p><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">Good luck!<br>Press Next to start the experiment.</p></div>"]				
+						pages: ["<div class=\"jspsych-survey-multi-choice-question\"><p>Please keep a normal eating pace throughout the task. Remember to finish the task, even when you have finished your meal sooner.</p><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">Good luck!<br>Press Next to start the experiment.</p></div>"]				
 					};
 					timeline.push(eatingInstructions);
 				};
 			}
 			console_log('expanded trials, there are now ' + timeline.length + ' trials in the timeline');
 		
-		// function to create instruction screen at the start of trials
+			// function to create instruction screen at the start of trials
 			function createTrialInstructions(category,difficulty,blocknr) {
 				var speedIndicator;
 				switch (difficulty) {
@@ -568,19 +576,37 @@
 				};
 				var instruct_trial = {
 					type: 'single-stim', //using single-stim instead of text so that the delay can be for a fixed period of time
-						stimulus: function () {
-						if (Math.round(Math.random())==1 & blocknr > 0) { // in 50% of trials, remind people to eat as normal
-							 var eatReminderStr = "<p><h6>Remember to eat normally during the trials</h6></p>"} else { var eatReminderStr = ""; };
-							 return "<p><h2>"+category+"</h2></p><p><h2>"+speedIndicator+"</h2></p>"+eatReminderStr},
+					stimulus: function () {
+					if (Math.round(Math.random())==1 & blocknr > 0) { // in 50% of trials, remind people to eat as normal
+						 var eatReminderStr = "<p><h6>Remember to eat normally during the trials</h6></p>"} else { var eatReminderStr = ""; };
+						 return "<p><h2>"+category+"</h2></p><p><h2>"+speedIndicator+"</h2></p>"+eatReminderStr
+					 },
 					timing_response: INFO.categoryInstructDuration, // time to present instructions
 					choices: 'none', // no keys are allowed to advance
 					is_html: true,
 					on_finish: function () {
 						trial_nr++;		// increase the (global) trial number
-						if (INFO.saveProgressAfterTrials.indexOf(trial_nr)) {saveData('inprogress');}
+						if (INFO.saveProgressAfterTrials.indexOf(trial_nr)>=0) {saveData('inprogress');} // save after predefined save points
 					} 
 				}
 				return instruct_trial;
+			}
+
+			// function to create progress bar update to subjects
+			function createProgressUpdate(currTrialNum,totalTrialNum) {
+				var progress_trial = {
+					type: 'single-stim', //using single-stim instead of text so that the delay can be for a fixed period of time
+					stimulus: function () {
+						// update progress bar
+						var percentProgressString = 100*(currTrialNum/totalTrialNum)+"%";
+						return '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice"><h2>Task progress:</h2></p></div><div id="progressbar-background"><div id="progressbar-bar" style="width:'+percentProgressString+';"></div></div>';
+					 },
+					timing_response: INFO.categoryInstructDuration, // time to present instructions
+					choices: 'none', // no keys are allowed to advance
+					is_html: true,
+					on_finish: function () {} 
+				}
+				return progress_trial;
 			}
 			
 		// function to obtain subject performance metrics
@@ -910,7 +936,7 @@
 		        '_' + randSessionId + '_' + sessionPhaseStr + '_'
 		        +('0' + now.getHours()).slice(-2) + 'h' +
 		        ('0' + now.getMinutes()).slice(-2);
-		
+			var session_str = 'sess'+subjInfo[0].next_session;
 		    var subj_id_str;
 		    if (jsPsych.data.subject == null) {
 		        // in case we the subject ID was not given in the URL, we fill in the IP address. If obtaining that didn't succeed, the subject name will be 'noID'
@@ -931,7 +957,7 @@
 					console_log('Saving data to MySQL: '+subj_id_str+' & '+nowString+' & '+sessionPhaseStr);
 					writeDataMySQL(subj_id_str,nowString,sessionPhaseStr)
 				} else {
-					var savePath = subj_id_str + '_' + nowString + '.csv';
+					var savePath = subj_id_str + '_' + session_str + '_' + nowString + '.csv';
 					console_log('Saving to CSV file: ' + savePath);
 					writeDataCSV(savePath, jsPsych.data.dataAsCSV());
 		    }
