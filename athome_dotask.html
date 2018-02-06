@@ -28,8 +28,6 @@
 		</script>
 		<script src="jspsych-5.0.3/plugins/jspsych-survey-text.js">
 		</script>
-		<script src="platform.js">
-		</script>
 		<script src="jspsych-5.0.3/plugins/jspsych-survey-multi-choice.js">
 		</script>
 		<link href="jspsych-5.0.3/css/jspsych-visdet_NL_21_10.css" rel="stylesheet" type="text/css"> </link>
@@ -331,10 +329,7 @@
 					choices: ['Next'],
 					prompt: function() {return "<p>Welcome to the session of the home experiment.<br> As you know, you will count images belonging to a certain category, while you are eating.</p><p>Press next to continue</p>"},
 					button_html: "<a class='jspsych-btn'>%choice%</a>",
-					on_finish: function (data) {
-						if (data.button_pressed==0) {consentForSave = true;}
-						console_log('consent given: '+consentForSave);    	
-					}
+					on_finish: function (data) {}
 				};
 				if (debugSession==false) {timeline.push(openingScreen);}
 			}
@@ -380,9 +375,7 @@
 				timeline.push(showTimeScreen);
 				/*timeline.push(showTimeScreen);
 				timeline.push(showTimeScreen);*/
-			};
-			
-			var consentForSave = false;
+			};		
 		
 			// Welcome screen
 			var openingScreen = {
@@ -391,10 +384,7 @@
 				choices: ['Next'],
 				prompt: "<p>Welcome to this experiment. You will respond to images as fast as possible, while you are eating. This will take about 20 minutes.</p><p>Press next to continue</p>",
 				button_html: "<a class='jspsych-btn'>%choice%</a>",
-				on_finish: function (data) {
-					if (data.button_pressed==0) {consentForSave = true;}
-					console_log('consent given: '+consentForSave);    	
-				}
+				on_finish: function (data) {}
 			};
 		  //if (debugSession==false) {timeline.push(openingScreen);}
 		  
@@ -411,7 +401,7 @@
 					],
 					show_clickable_nav: true,
 					data: function (){
-						var instructions_data = {preloadDuration: preloadDuration,platform: platform.description,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
+						var instructions_data = {preloadDuration: preloadDuration,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
 						if (INFO.getIP == true) {
 							if (IPinfo.hasOwnProperty('responseJSON')) {
 								if (IPinfo.responseJSON.hasOwnProperty('city')) {
@@ -442,7 +432,7 @@
 					],
 					show_clickable_nav: true,
 					data: function (){
-						var instructions_data = {preloadDuration: preloadDuration,platform: platform.description,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
+						var instructions_data = {preloadDuration: preloadDuration,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
 						if (INFO.getIP == true) {
 							if (IPinfo.hasOwnProperty('responseJSON')) {
 								if (IPinfo.responseJSON.hasOwnProperty('city')) {
