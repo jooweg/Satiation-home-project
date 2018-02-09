@@ -906,10 +906,132 @@
 				return pl;
 			}
 		
+			// Standard Normal variate using Box-Muller transform.
+			function randn_bm() {
+				 var u = 0, v = 0;
+				 while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+				 while(v === 0) v = Math.random();
+				 return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+			}
+
+			// Returns a random integer between min (inclusive) and max (inclusive)
+			function getRandomInt(min, max) {
+				 return Math.floor(Math.random() * (max - min + 1)) + min;
+			}
+			
+			// get date from a specified number of days ago
+			function getDateFromDaysAgo(ndays) {
+				return new Date((new Date())-(ndays*24*60*60*1000))
+			}
+			
+			// get number of days (with decimals) between two Dates
+			function getDateDaysDifference(date1,date2) {				
+				//Date.prototype.getUnixTime = function() { return this.getTime()/1000|0 }; // adds ability to get unix times from Date objects
+				return Math.abs((date2.getTime() - date1.getTime())/(24*60*60*1000))
+			}
+			
+			// determine amount of time since first session of participant
+			function updateLeaderboard() {
+				if (subjInfo[0].next_session==1) {return}  // we don't need to update on the first session
+				var firstSessionDate = new Date(Date.parse(subjInfo[0].first_session_date));
+				var lastSessionDate  = new Date(Date.parse(subjInfo[0].last_session_date));
+				var daysInStudy = getDateDaysDifference(firstSessionDate,(new Date()))+1; // th
+				var daysSinceLastUpdate = getDateDaysDifference(lastSessionDate,(new Date()));
+				var participantAvgDaysBetweenSessions = daysInStudy / subjInfo[0].next_session;
+				console_log('daysInStudy: ' + Math.round(daysInStudy)+ '. participantAvgDaysBetweenSessions' + participantAvgDaysBetweenSessions)
+				
+				// base the speed of the 'opponents' on the average # days between sessions, to keep them close together
+				var opponentAvgDaysBetweenSessions = [];
+				if (participantAvgDaysBetweenSessions < 1.5) {
+opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions,participantAvgDaysBetweenSessions+0.2,participantAvgDaysBetweenSessions+0.4,participantAvgDaysBetweenSessions+0.7]; // participant will end up in 1st place
+				} else if (participantAvgDaysBetweenSessions < 2) {
+					opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions-0.4,participantAvgDaysBetweenSessions,participantAvgDaysBetweenSessions+0.3,participantAvgDaysBetweenSessions+0.5];
+					//opponentAvgDaysBetweenSessions = [1.8,2,2.3,2.7]; // participant will likely end up in 2nd place
+				} else if (participantAvgDaysBetweenSessions < 2.5) {
+					opponentAvgDaysBetweenSessions = [1.8,2,2.5,3]; // participant will end up in 3rd place
+				} else {
+					opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions-1,participantAvgDaysBetweenSessions-0.6,participantAvgDaysBetweenSessions-0.3,participantAvgDaysBetweenSessions+0.5]; // participant will end up in 4th place
+				}
+				console_log('opponent average speed:')
+				console_log(opponentAvgDaysBetweenSessions);
+				
+				// ## Update the number of sessions the opponents have done since the participant's last seesion ##
+				sortLeaderboard(); // sort the leaderboard (descending) according to # of sessions completed				
+				var opponentExpectedNSessions = [];  // expected opponent total # session completed based on speed and # days subject is in study
+				var opponentExpectedNSessions2Update = [];  // expected opponent total # session completed based on speed and # days subject is in study
+				var opponentGeneratedNrOfSessions2Update = [];
+				var opponentNrOfSessions2Update = [];
+				for (var iCtr=0;iCtr<subjInfo[0].leaderboard.length;iCtr++) {
+					opponentExpectedNSessions.push((1/opponentAvgDaysBetweenSessions[iCtr])*daysInStudy);
+						opponentExpectedNSessions2Update.push(opponentExpectedNSessions[iCtr]-subjInfo[0].leaderboard[iCtr].n_completed_sessions);						opponentGeneratedNrOfSessions2Update.push(getRandomInt(0,Math.round(opponentExpectedNSessions2Update[iCtr])));
+					opponentNrOfSessions2Update.push(Math.min.apply(Math, [opponentGeneratedNrOfSessions2Update[iCtr],daysSinceLastUpdate]));
+					// do the update
+					subjInfo[0].leaderboard[iCtr].n_completed_sessions += opponentNrOfSessions2Update[iCtr]
+				}
+				
+				sortLeaderboard(); // sort the leaderboard (descending) according to # of sessions completed
+			}
+			
+			function leaderboard2HTML() {
+				sortLeaderboard(); // sort the leaderboard (descending) according to # of sessions completed
+				var html = '<p><table>';
+				var participantIncluded = false;
+				for (var iOpponent=0;iOpponent<subjInfo[0].leaderboard.length;iOpponent++) {
+					if (participantIncluded==false & subjInfo[0].next_session>=subjInfo[0].leaderboard[iOpponent].n_completed_sessions) {
+						html += '<tr><td><b>You!</b></td><td><b>'+Math.round(subjInfo[0].next_session)+'</b></td></tr>';
+						participantIncluded = true;
+					}
+					html += '<tr><td>'+subjInfo[0].leaderboard[iOpponent].name+'</td><td>'+Math.round(subjInfo[0].leaderboard[iOpponent].n_completed_sessions)+'</td></tr>';
+				}
+				html += '</table></p>'
+				return html
+			}
+			
+			function sortLeaderboard() {
+				// sort the leaderboard (descending) according to # of sessions completed
+				subjInfo[0].leaderboard.sort(function(a, b){ return b.n_completed_sessions - a.n_completed_sessions; });			
+			}
+			
+			function simulateParticipantSessions(avgDaysBetweenSessions) {
+				// generate session days
+				var currDay = 0;
+				var sessionDays = [];
+				var nDays = 30;
+				document.write('<h1>simulateParticipantSessions: simulating '+nDays+' sessions with an average of '+avgDaysBetweenSessions+' days between sessions</h1>');
+				for (var iCtr=0;iCtr<(nDays+1);iCtr++) {
+					sessionDays.push(Math.round(currDay));
+					currDay+=avgDaysBetweenSessions;
+				}
+				// simulate sessions
+				subjInfo[0].first_session_date = getDateFromDaysAgo(0).toString();
+				var dayCtr = 0;
+				for (var iSession=1;iSession<sessionDays.length;iSession++) {
+					subjInfo[0].next_session = iSession;
+					nDayStep = (sessionDays[iSession]-sessionDays[iSession-1]);
+					dayCtr += nDayStep;
+					// set first day to the amount of days simulated so far
+					subjInfo[0].first_session_date = getDateFromDaysAgo(dayCtr).toString();
+					subjInfo[0].last_session_date = getDateFromDaysAgo(nDayStep).toString();
+					updateLeaderboard();
+					document.write('Session '+iSession+': day '+dayCtr+' ('+nDayStep+' days after previous session)<br>')
+					document.write(leaderboard2HTML());
+				}
+			}
+			
+			function testLeaderboardUpdate() {
+				subjInfo[0].first_session_date = getDateFromDaysAgo(3).toString();
+				subjInfo[0].last_session_date = getDateFromDaysAgo(3).toString();
+				subjInfo[0].next_session = 2;
+			}
+			
 			function updateSubjectSessionFileOnDisk() {
 				// update subject JSON session info
 				subjInfo[0].next_session++;
 				subjInfo[0].last_session_date = (new Date()).toString();
+				if (subjInfo[0].next_session==1) {
+					// when this is the first session, record the date for determining how long participant is in the study during later sessions
+					subjInfo[0].first_session_date = subjInfo[0].last_session_date;
+				}
 				var subjInfoURL = experimentVersion+'_session_playlist_'+subjectCode+'.json';
 				console_log('writing to '+subjInfoURL);
 				console_log(JSON.stringify(subjInfo));
