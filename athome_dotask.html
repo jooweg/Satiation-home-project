@@ -4,8 +4,7 @@
 		<title>
 			@home experiment
 		</title>
-<!-- [JW] external scripts are loaded in sequential order, so starting with the script that generates the file list should work (https://stackoverflow.com/questions/19035/javascript-load-order) -->
-<!--<script src> -->
+		<!--<script src> -->
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js">
 		</script>
 		<script src="jspsych-5.0.3/jspsych.js">
@@ -110,7 +109,7 @@
 		var imgCategorical = imgFurniture.concat(imgTools, imgToys); // make a list of the categorical stimuli (those that will be responded to)
 		img2Preload = img2Preload.concat(imgCategorical); // add the categorical images
 		// list of other images to preload
-		var otherImg2Preload = makeImgPath(['icon_play.png','icon_recording.png']);
+		var otherImg2Preload = makeImgPath(['icon_play.png','icon_recording_sq.png','calibrate_spoon_nograb_sq.jpg','calibrate_spoon_grab.jpg']);
 		img2Preload = img2Preload.concat(otherImg2Preload); // add the other images
 		console_log('preloading ' + img2Preload.length + ' images');
 		
@@ -392,7 +391,7 @@
 		  
 			if (INFO.nPracticeTrials>0) {
 				// In the first sessions, present instructions and practice trials
-				var clickableInstructions = {
+				var practiceInstructions = {
 					type: 'instructions',
 					pages: [
 					  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice"><i>The first few session of the home sessions, these instructions plus a short practice will be presented.</i></p><p class="jspsych-survey-multi-choice-text survey-multi-choice">During this experiment, images will be presented of different categories: Toys, Tools and Furniture.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Before a trial starts you will be instructed to which category of image you should count.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Your task is to count the number of occurences of that particular category in the series of images.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to continue.</p></div>',
@@ -423,39 +422,72 @@
 						console_log('experiment start time: '+jsPsych.startTime());		
 					},		
 				}
-			} else {
-				// After the first sessions, skip instructions and practice trials
-				var clickableInstructions = {
+				if (debugSession==false) {timeline.push(practiceInstructions);}
+			}
+
+			//// Spoon calibration: instructions + 5 times ungrab&grab
+			var spoonCalibrationInstructions = {
 					type: 'instructions',
-					pages: [
-					  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to start this session.</p><p>Remember to keep a normal eating pace throughout the task and to finish the task, even when you have finished your meal sooner.</p>',
-					],
 					show_clickable_nav: true,
-					data: function (){
-						var instructions_data = {preloadDuration: preloadDuration,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
-						if (INFO.getIP == true) {
-							if (IPinfo.hasOwnProperty('responseJSON')) {
-								if (IPinfo.responseJSON.hasOwnProperty('city')) {
-									instructions_data.city = IPinfo.responseJSON.city;
-									instructions_data.ip = IPinfo.responseJSON.ip;
-								}
+					pages: [
+					  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Now, we will calibrate the spoon. If you did not turn the spoon on, please do so now.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Please hold the spoon in the  hand you normally would. After this screen, a series of images will instruct you when to touch the tip of the spoon with your other hand. In order to do this, you will need to have a free hand.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">For the moment, please lay down your phone. After pressing Next, please hold your hands on the spoons as is shown in the pictures. Please change your grip as soon as the picture changes.</p></div>']
+		  };
+			var spoonCalibrationGrabSpoon = {
+				type: 'single-stim',
+				stimulus: 'img/calibrate_spoon_grab_sq.jpg',	
+				timing_stim: 1000,
+				timing_response: 1000,
+				timing_post_trial: 0,
+				response_ends_trial: false,
+			};		  
+			var spoonCalibrationUngrabSpoon = {
+				type: 'single-stim',
+				stimulus: 'img/calibrate_spoon_nograb_sq.jpg',	
+				timing_stim: 1000,
+				timing_response: 1000,
+				timing_post_trial: 0,
+				response_ends_trial: false,
+			};		  
+			nCalibrationLoops = 6;  // # data points for calibration
+			if (debugSession==false) {
+				timeline.push(spoonCalibrationInstructions);
+				for (var iLoop = 0; iLoop < nCalibrationLoops; iLoop++) {
+					timeline.push(spoonCalibrationUngrabSpoon);
+					timeline.push(spoonCalibrationGrabSpoon);
+				}
+			}
+			timeline.push(spoonCalibrationUngrabSpoon);
+
+			// Show a final clickthrough screen before starting the trials, and where start logfile is saved
+			var finalInstructions = {
+				type: 'instructions',
+				pages: [
+				  '<div class=\"jspsych-survey-multi-choice-question\"><p>Please pick up your phone again to start the trials. After this screen, you can start eating. Remember to keep a normal eating pace throughout the task and to finish the task, even when you have finished your meal sooner.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to start the trials this session.</p>',
+				],
+				show_clickable_nav: true,
+				data: function (){
+					var instructions_data = {preloadDuration: preloadDuration,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
+					if (INFO.getIP == true) {
+						if (IPinfo.hasOwnProperty('responseJSON')) {
+							if (IPinfo.responseJSON.hasOwnProperty('city')) {
+								instructions_data.city = IPinfo.responseJSON.city;
+								instructions_data.ip = IPinfo.responseJSON.ip;
 							}
 						}
-						return instructions_data	
-					},
-		
-					on_finish: function () {
-						jsPsych.data.addProperties({
-							t0_jspsych_date: (jsPsych.startTime()).toISOString(),
-							t0_jspsych: jsPsych.startTime(),
-							});
-						saveData('start'); 
-						console_log('experiment start time: '+jsPsych.startTime());		
-					},		
-				}
-			};
-
-			if (debugSession==false) {timeline.push(clickableInstructions);}
+					}
+					return instructions_data	
+				},
+	
+				on_finish: function () {
+					jsPsych.data.addProperties({
+						t0_jspsych_date: (jsPsych.startTime()).toISOString(),
+						t0_jspsych: jsPsych.startTime(),
+						});
+					saveData('start'); 
+					console_log('experiment start time: '+jsPsych.startTime());		
+				},		
+			}
+			if (debugSession==false) {timeline.push(finalInstructions);}
 			
 			//// (post-practice) Trial part of timeline
 			var nextTimelineTrial;
@@ -938,22 +970,19 @@
 				var daysInStudy = getDateDaysDifference(firstSessionDate,(new Date()))+1; // th
 				var daysSinceLastUpdate = getDateDaysDifference(lastSessionDate,(new Date()));
 				var participantAvgDaysBetweenSessions = daysInStudy / subjInfo[0].next_session;
-				console_log('daysInStudy: ' + Math.round(daysInStudy)+ '. participantAvgDaysBetweenSessions' + participantAvgDaysBetweenSessions)
+				//console_log('daysInStudy: ' + Math.round(daysInStudy)+ '. participantAvgDaysBetweenSessions' + participantAvgDaysBetweenSessions)
 				
 				// base the speed of the 'opponents' on the average # days between sessions, to keep them close together
 				var opponentAvgDaysBetweenSessions = [];
 				if (participantAvgDaysBetweenSessions < 1.5) {
-opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions,participantAvgDaysBetweenSessions+0.2,participantAvgDaysBetweenSessions+0.4,participantAvgDaysBetweenSessions+0.7]; // participant will end up in 1st place
+opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions,participantAvgDaysBetweenSessions+0.3,participantAvgDaysBetweenSessions+0.5,participantAvgDaysBetweenSessions+0.8]; // participant will end up in 1st place
 				} else if (participantAvgDaysBetweenSessions < 2) {
-					opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions-0.4,participantAvgDaysBetweenSessions,participantAvgDaysBetweenSessions+0.3,participantAvgDaysBetweenSessions+0.5];
-					//opponentAvgDaysBetweenSessions = [1.8,2,2.3,2.7]; // participant will likely end up in 2nd place
+					opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions-0.3,participantAvgDaysBetweenSessions,participantAvgDaysBetweenSessions+0.4,participantAvgDaysBetweenSessions+0.6];
 				} else if (participantAvgDaysBetweenSessions < 2.5) {
 					opponentAvgDaysBetweenSessions = [1.8,2,2.5,3]; // participant will end up in 3rd place
 				} else {
 					opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions-1,participantAvgDaysBetweenSessions-0.6,participantAvgDaysBetweenSessions-0.3,participantAvgDaysBetweenSessions+0.5]; // participant will end up in 4th place
 				}
-				console_log('opponent average speed:')
-				console_log(opponentAvgDaysBetweenSessions);
 				
 				// ## Update the number of sessions the opponents have done since the participant's last seesion ##
 				sortLeaderboard(); // sort the leaderboard (descending) according to # of sessions completed				
@@ -961,9 +990,13 @@ opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions,participantA
 				var opponentExpectedNSessions2Update = [];  // expected opponent total # session completed based on speed and # days subject is in study
 				var opponentGeneratedNrOfSessions2Update = [];
 				var opponentNrOfSessions2Update = [];
+				var longAbsenceMultiplier;
+				var longAbsenceAdd;  // after long absences of the participant, the opponents should have completed more sessions.
+
 				for (var iCtr=0;iCtr<subjInfo[0].leaderboard.length;iCtr++) {
 					opponentExpectedNSessions.push((1/opponentAvgDaysBetweenSessions[iCtr])*daysInStudy);
-						opponentExpectedNSessions2Update.push(opponentExpectedNSessions[iCtr]-subjInfo[0].leaderboard[iCtr].n_completed_sessions);						opponentGeneratedNrOfSessions2Update.push(getRandomInt(0,Math.round(opponentExpectedNSessions2Update[iCtr])));
+						opponentExpectedNSessions2Update.push(opponentExpectedNSessions[iCtr]-subjInfo[0].leaderboard[iCtr].n_completed_sessions);
+							if (daysSinceLastUpdate>=5) {longAbsenceMultiplier=1.25;longAbsenceAdd=Math.random();} else {longAbsenceMultiplier=1;longAbsenceAdd=0;}										opponentGeneratedNrOfSessions2Update.push(getRandomInt(0,Math.round(opponentExpectedNSessions2Update[iCtr]*longAbsenceMultiplier+longAbsenceAdd)));
 					opponentNrOfSessions2Update.push(Math.min.apply(Math, [opponentGeneratedNrOfSessions2Update[iCtr],daysSinceLastUpdate]));
 					// do the update
 					subjInfo[0].leaderboard[iCtr].n_completed_sessions += opponentNrOfSessions2Update[iCtr]
@@ -976,14 +1009,17 @@ opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions,participantA
 				sortLeaderboard(); // sort the leaderboard (descending) according to # of sessions completed
 				var html = '<p><table>';
 				var participantIncluded = false;
+				var participantRank;
 				for (var iOpponent=0;iOpponent<subjInfo[0].leaderboard.length;iOpponent++) {
 					if (participantIncluded==false & subjInfo[0].next_session>=subjInfo[0].leaderboard[iOpponent].n_completed_sessions) {
 						html += '<tr><td><b>You!</b></td><td><b>'+Math.round(subjInfo[0].next_session)+'</b></td></tr>';
 						participantIncluded = true;
+						participantRank = iOpponent+1;
 					}
-					html += '<tr><td>'+subjInfo[0].leaderboard[iOpponent].name+'</td><td>'+Math.round(subjInfo[0].leaderboard[iOpponent].n_completed_sessions)+'</td></tr>';
+					html += '<tr><td>'+subjInfo[0].leaderboard[iOpponent].name+'</td><td>'+Math.min.apply(Math, [30,Math.round(subjInfo[0].leaderboard[iOpponent].n_completed_sessions)])+'</td></tr>';
 				}
 				html += '</table></p>'
+				console_log('position player: #'+participantRank)
 				return html
 			}
 			
@@ -1000,8 +1036,22 @@ opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions,participantA
 				document.write('<h1>simulateParticipantSessions: simulating '+nDays+' sessions with an average of '+avgDaysBetweenSessions+' days between sessions</h1>');
 				for (var iCtr=0;iCtr<(nDays+1);iCtr++) {
 					sessionDays.push(Math.round(currDay));
-					currDay+=avgDaysBetweenSessions;
+					// test what happens when subject takes a week-long holiday
+					/*if (iCtr==Math.round(nDays/2)) {
+						currDay+=7;
+					} else {*/
+						//currDay+=avgDaysBetweenSessions;
+					//}
+					// test what happens when the subject is very steady
+					//currDay+=avgDaysBetweenSessions;
+					// test what happens when the subject is somewhat random in their sessions
+					if (Math.random()<0.95) {
+						currDay+=Math.round(getRandomInt(1,2)+0.3);
+					} else {
+						currDay+=getRandomInt(3,6);
+					}
 				}
+				
 				// simulate sessions
 				subjInfo[0].first_session_date = getDateFromDaysAgo(0).toString();
 				var dayCtr = 0;
@@ -1013,7 +1063,7 @@ opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions,participantA
 					subjInfo[0].first_session_date = getDateFromDaysAgo(dayCtr).toString();
 					subjInfo[0].last_session_date = getDateFromDaysAgo(nDayStep).toString();
 					updateLeaderboard();
-					document.write('Session '+iSession+': day '+dayCtr+' ('+nDayStep+' days after previous session)<br>')
+					document.write('Session '+iSession+': day '+dayCtr+' ('+nDayStep+' days after previous session, avg days between sessions: '+(sessionDays[iSession]/iSession)+')<br>');
 					document.write(leaderboard2HTML());
 				}
 			}
