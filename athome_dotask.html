@@ -44,7 +44,7 @@
 		/* =============== Experiment Preferences & Stimuli =============== */
 			var subjectCode = jsPsych.data.getURLVariable('subject') || "sub999"; 	// sub999 is the default subject code
 			var currSession = jsPsych.data.getURLVariable('session');
-			var experimentVersion = jsPsych.data.getURLVariable('experimentVersion') || "atHomePilot";		// atHomePilot is default
+			var experimentVersion = jsPsych.data.getURLVariable('experimentVersion') || "atHome";		// atHomePilot is default
 
 			// read subject info from file
 			var subjInfo;
@@ -109,7 +109,7 @@
 		var imgCategorical = imgFurniture.concat(imgTools, imgToys); // make a list of the categorical stimuli (those that will be responded to)
 		img2Preload = img2Preload.concat(imgCategorical); // add the categorical images
 		// list of other images to preload
-		var otherImg2Preload = makeImgPath(['icon_play.png','icon_recording_sq.png','calibrate_spoon_nograb_sq.jpg','calibrate_spoon_grab.jpg']);
+		var otherImg2Preload = makeImgPath(['calibrate_spoon_nograb_sq.jpg','calibrate_spoon_grab.jpg']);
 		img2Preload = img2Preload.concat(otherImg2Preload); // add the other images
 		console_log('preloading ' + img2Preload.length + ' images');
 		
@@ -141,7 +141,7 @@
 				// or updating text in the DOM.
 				//console_log('preloaded '+img2Preload[nLoaded]);
 				if (percentcomplete == 100) {
-					// fin out which images failed to load
+					// find out which images failed to load
 					var failed2load = getPreloadFails(img2Preload);
 				
 					preloadDuration = Math.round(Date.now()-t0_4_preload.now); // determine how long it took to load
@@ -198,7 +198,6 @@
 			//nImgPerCategory2Preload: 15,
 			nPracticeTrials: currNPracticeTrials,
 			saveMethod: 'csv',
-			getIP: false, 	// should we check IP address? (warning:seems to trigger ad blockers )
 			displayTimeTriggers: false, 	// controls whether internal time (of phone/pc) is shown on the screen at the start and end of experiment, used as time triggers to synchronise (only necessary when doing task in the lab)
 			respLetterLocation: 4,  // obsolete? location of category letter (for img/G35.jpg    
 			saveProgressAfterTrials: [15,30,45,53], 	// trial numbers after which to save an (intermediate) logfile
@@ -372,8 +371,6 @@
 				// show the time twice
 				timeline.push(showTimeScreen);
 				timeline.push(showTimeScreen);
-				/*timeline.push(showTimeScreen);
-				timeline.push(showTimeScreen);*/
 			};		
 		
 			// Welcome screen
@@ -400,29 +397,12 @@
 					],
 					show_clickable_nav: true,
 					data: function (){
-						var instructions_data = {preloadDuration: preloadDuration,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
-						if (INFO.getIP == true) {
-							if (IPinfo.hasOwnProperty('responseJSON')) {
-								if (IPinfo.responseJSON.hasOwnProperty('city')) {
-									instructions_data.city = IPinfo.responseJSON.city;
-									instructions_data.ip = IPinfo.responseJSON.ip;
-								}
-							}
-						}
+						var instructions_data = {preloadDuration: preloadDuration,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth};
 						return instructions_data	
 					},
-		
-					on_finish: function () {
-						jsPsych.data.addProperties({
-							t0_jspsych_date: (jsPsych.startTime()).toISOString(),
-							t0_jspsych: jsPsych.startTime(),
-							session_nr: subjInfo[0].next_session,
-							});
-						saveData('start'); 
-						console_log('experiment start time: '+jsPsych.startTime());		
-					},		
 				}
 				if (debugSession==false) {timeline.push(practiceInstructions);}
+				addTrialBlock2Timeline(trialBlocks,0);  // add the trial block to the timeline
 			}
 
 			//// Spoon calibration: instructions + 5 times ungrab&grab
@@ -430,7 +410,7 @@
 					type: 'instructions',
 					show_clickable_nav: true,
 					pages: [
-					  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Now, we will calibrate the spoon. If you did not turn the spoon on, please do so now.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Please hold the spoon in the  hand you normally would. After this screen, a series of images will instruct you when to touch the tip of the spoon with your other hand. In order to do this, you will need to have a free hand.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">For the moment, please lay down your phone. After pressing Next, please hold your hands on the spoons as is shown in the pictures. Please change your grip as soon as the picture changes.</p></div>']
+					  '<div class=\"jspsych-survey-multi-choice-question\"><p class="jspsych-survey-multi-choice-text survey-multi-choice">Now, we will calibrate the spoon. If you did not turn the spoon on already, please do so now.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Please hold the spoon in the  hand you normally would. After this screen, a series of images will instruct you when to touch the tip of the spoon with your other hand. In order to do this, you will need to have a free hand.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">For the moment, please lay down your phone. After pressing Next, please hold your hands on the spoons as will be shown in the pictures. Please change your grip as soon as the picture changes.</p></div>']
 		  };
 			var spoonCalibrationGrabSpoon = {
 				type: 'single-stim',
@@ -462,19 +442,11 @@
 			var finalInstructions = {
 				type: 'instructions',
 				pages: [
-				  '<div class=\"jspsych-survey-multi-choice-question\"><p>Please pick up your phone again to start the trials. After this screen, you can start eating. Remember to keep a normal eating pace throughout the task and to finish the task, even when you have finished your meal sooner.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to start the trials this session.</p>',
+				  '<div class=\"jspsych-survey-multi-choice-question\"><p>Please pick up your phone again to start the trials. After this screen, you can start eating.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Remember to keep a normal eating pace throughout the task and to finish the task, even when you have finished your meal sooner.</p><p class="jspsych-survey-multi-choice-text survey-multi-choice">Press Next to start the trials this session.</p>',
 				],
 				show_clickable_nav: true,
 				data: function (){
-					var instructions_data = {preloadDuration: preloadDuration,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth,city:'undefined city',ip:'undefined IP'};
-					if (INFO.getIP == true) {
-						if (IPinfo.hasOwnProperty('responseJSON')) {
-							if (IPinfo.responseJSON.hasOwnProperty('city')) {
-								instructions_data.city = IPinfo.responseJSON.city;
-								instructions_data.ip = IPinfo.responseJSON.ip;
-							}
-						}
-					}
+					var instructions_data = {preloadDuration: preloadDuration,experimentVersion:window.location.href,screenAvailHeight: screen.availHeight,screenAvailWidth: screen.availWidth};
 					return instructions_data	
 				},
 	
@@ -482,26 +454,33 @@
 					jsPsych.data.addProperties({
 						t0_jspsych_date: (jsPsych.startTime()).toISOString(),
 						t0_jspsych: jsPsych.startTime(),
+						session_nr: subjInfo[0].next_session,
 						});
 					saveData('start'); 
 					console_log('experiment start time: '+jsPsych.startTime());		
 				},		
 			}
 			if (debugSession==false) {timeline.push(finalInstructions);}
+
+			//// add (post-practice) trial part of timeline
+			console.log('adding trials');
+			for (iBlock=blockOffset; iBlock < trialBlocks.length; iBlock++) {
+				addTrialBlock2Timeline(trialBlocks,iBlock);
+				console.log('added block of trials');
+			}
 			
-			//// (post-practice) Trial part of timeline
-			var nextTimelineTrial;
-		
-			// expand trial list into separate subtrials
-			var currTrial;
-			var currTrailCounter = 0;
-			for (var iBlock = 0; iBlock < trialBlocks.length; iBlock++) {
+			function addTrialBlock2Timeline(trialBlocks,iBlock) {
+				var nextTimelineTrial;		
+				// expand trial list into separate subtrials
+				var currTrial;
+				var currTrailCounter = 0;
+				//for (var iTrial = 0;iTrial < 2; iTrial++) {
 				for (var iTrial = 0;iTrial < trialBlocks[iBlock].length; iTrial++) {
 					currTrial = trialBlocks[iBlock][iTrial];
 					currTrailCounter++;
- 					// let each trial start with response instructions
+					// let each trial start with response instructions
 					timeline.push(createTrialInstructions(currTrial.response_category,currTrial.trial_difficulty,iBlock));
-		
+	
 					// fill the list with the current subtrials
 					for (var iSubTrial = 0; iSubTrial < currTrial.subTrialStimuli.length; iSubTrial++) {
 						nextTimelineTrial = {
@@ -514,7 +493,7 @@
 							timing_stim: currTrial.dur_stimulus, // display 
 							timing_response: currTrial.dur_stimulus + currTrial.dur_mask,
 							timing_post_trial: 0,
-							
+						
 							data: {
 								mask: currTrial.subTrialMasks[iSubTrial],
 								dur_stimulus: currTrial.dur_stimulus,
@@ -526,15 +505,13 @@
 								trial_startdate: currTrial.start_date,
 								trial_enddate: currTrial.end_date,
 							},
-							
+						
 							// on finishing each stimulus, determine the correctness of the response
 							on_finish: function(data) {
 								// add trial number (for current experiment, JSpsych's counts each subtrail as a separate trial)
 								jsPsych.data.addDataToLastTrial({trial_nr: trial_nr});
 							}
 						}
-						//console_log('nextTimelineTrial');
-						//console_log(nextTimelineTrial);
 						timeline.push(nextTimelineTrial);
 					} // subtrial loop
 					// present 3AFC question after all stimuli have been presented
@@ -563,7 +540,7 @@
 					if (INFO.showProgressAfterTrials.indexOf(currTrailCounter)>=0) {					timeline.push(createProgressUpdate(currTrailCounter,trialBlocks[iBlock].length));
 					}
 				} // trial loop
-				
+			
 				if (iBlock==0 & INFO.nPracticeTrials>0) {
 					// after the practice block, give the user feedback
 					var practiceBlockFeedback = {
@@ -577,17 +554,9 @@
 						},
 					};
 					timeline.push(practiceBlockFeedback);
-					
-					// after the practice block feedback, add some more instructions about eating during the task
-					var eatingInstructions = {
-						type: 'instructions',
-						show_clickable_nav: true,
-						pages: ["<div class=\"jspsych-survey-multi-choice-question\"><p>Please keep a normal eating pace throughout the task. Remember to finish the task, even when you have finished your meal sooner.</p><p class=\"jspsych-survey-multi-choice-text survey-multi-choice\">Good luck!<br>Press Next to start the experiment.</p></div>"]				
-					};
-					timeline.push(eatingInstructions);
 				};
+				console_log('expanded trials, there are now ' + timeline.length + ' trials in the timeline');
 			}
-			console_log('expanded trials, there are now ' + timeline.length + ' trials in the timeline');
 		
 			// function to create instruction screen at the start of trials
 			function createTrialInstructions(category,difficulty,blocknr) {
@@ -729,50 +698,36 @@
 		    }
 		}
 		
-			// present feedback at the end of the experiment
-		var debrief_block = {
+		// present 'end of trials screen' & save all the data to disk
+		var trialsFinishedScreen = {
 				type: 'instructions',
 				show_clickable_nav: true,
 				pages: [function() {
 		        var subject_data = getSubjectData();
-		
-		        //console_log(subject_data);
-		        
-		        /*var survey_responses_str = "";
-		        for (var i = 0; i < survey_trials.length; i++) {
-		              survey_responses_str += i + ": " + survey_trials[i].response + " "
-		              }*/
 					// add timing of the experiment just before saving
 					jsPsych.data.addProperties({
 						t0_researcher_pageload: t0,
 						t0_researcher_date: t0Date,
 						t0_researcher_start: t0_researcher_start,
-						//subject_data: subject_data,
 					});
-		        // save data (logfile & session playlist) to disk before feedback is given
+		        // save data (logfile & session playlist) to disk before the leaderboard is shown
+		        jsPsych.data.addDataToLastTrial({leaderboard: leaderboard2HTML()});
 		        saveData('end');
 				  updateSubjectSessionFileOnDisk();
-		        var return_str = "<div class=\"jspsych-survey-multi-choice-question\"><p>You finished the trials. Press 'Next' to see your performance relative to others.</p></div>";
+		        var return_str = "<div class=\"jspsych-survey-multi-choice-question\"><p>You finished the trials. Press 'Next' to see how many sessions you've completed relative to others in the experiment.</p></div>";
 					return return_str;
 		    }],
 		};
-		timeline.push(debrief_block);
+		timeline.push(trialsFinishedScreen);
 		
-		if (INFO.displayTimeTriggers==true) {
-				// put timing feedback for video at the end of the experiment
-				var videoTimingEnd = {
-					type: 'instructions',
-					show_clickable_nav: true,
-					pages: ["<div class=\"jspsych-survey-multi-choice-question\"><p>Researcher, press Next to start the final timing screens. Make sure the video recorder can see the device as the times are displayed.</p></div>"]				
-				};
-				timeline.push(videoTimingEnd);    
-			
-				var nTimeScreensAtEnd = 2;
-				for (var iTSAE=0;iTSAE<nTimeScreensAtEnd;iTSAE++) {
-					timeline.push(showTimeScreen);
-				}
-				saveData('end2');		
-			};
+		// as the final screen, show the leaderboard (first update it for this session)
+		updateLeaderboard();
+		var leaderboardScreen = {
+				type: 'instructions',
+				show_clickable_nav: false,
+				pages: ['<div class=\"jspsych-survey-multi-choice-question\">'+leaderboard2HTML()+'<p class="small">This shows how many session you have completed, relative to the other participants in your group. Note that, for privacy reasons, the names of the other participants have been ascribed randomly.</p><p class="small">You can now close this window by clicking the blue \'Close\' button below</p></div>'],
+		}
+		timeline.push(leaderboardScreen);
 		
 			// console logger (allows central switch of whether we want to log to console for debugging
 			function console_log(msg) {
@@ -922,7 +877,7 @@
 			// function to pick a playlistpath and return contents of the file
 			function loadTrialPlaylist(baseUrl,daycode,nPlaylists2ChooseFrom) {
 				var playlistnum = Math.floor(Math.random() * nPlaylists2ChooseFrom) + 1;
-				var playlistUrl = baseUrl + '/' + experimentVersion + '_WM_playlist_' + daycode + '_' + ('00'+playlistnum).slice(-3) + '.json';
+				var playlistUrl = baseUrl + '/' + experimentVersion + 'Pilot_WM_playlist_' + daycode + '_' + ('00'+playlistnum).slice(-3) + '.json';
 				
 				// Set the global configs to synchronous, i.e. wait for the file to load
 				$.ajaxSetup({
@@ -1088,7 +1043,19 @@ opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions,participantA
 				writeDataUpdatePlaylist(subjInfoURL,JSON.stringify(subjInfo));
 			}
 		
-			// function that writes subject data to disk
+		// function to add padding zeros
+		function zeroPad(num, numZeros) {
+			 var n = Math.abs(num);
+			 var zeros = Math.max(0, numZeros - Math.floor(n).toString().length );
+			 var zeroString = Math.pow(10,zeros).toString().substr(1);
+			 if( num < 0 ) {
+				  zeroString = '-' + zeroString;
+			 }
+
+			 return zeroString+n;
+		}		
+
+		// function that writes subject data to disk
 		function saveData(sessionPhaseStr) {
 		    // generate a unique filename for this subject / time combination
 		    var now = new Date();
@@ -1098,18 +1065,11 @@ opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions,participantA
 		        '_' + randSessionId + '_' + sessionPhaseStr + '_'
 		        +('0' + now.getHours()).slice(-2) + 'h' +
 		        ('0' + now.getMinutes()).slice(-2);
-			var session_str = 'sess'+subjInfo[0].next_session;
+			var session_str = 'sess'+zeroPad(subjInfo[0].next_session,2);
 		    var subj_id_str;
 		    if (jsPsych.data.subject == null) {
-		        // in case we the subject ID was not given in the URL, we fill in the IP address. If obtaining that didn't succeed, the subject name will be 'noID'
+		        // in case we the subject ID was not given in the URL, we fill in 'noID'
 		        subj_id_str = subjectCode || 'noID'; //+Math.floor(Math.random()*100000).toISOString();
-					if (INFO.getIP == true) {
-						if (IPinfo.hasOwnProperty('responseJSON')) {
-							if (IPinfo.responseJSON.hasOwnProperty('city')) {
-								subj_id_str = 'IP'+IPinfo.responseJSON.ip;
-							}
-						}
-					}
 		    } else {
 		        subj_id_str = jsPsych.data.subject;
 		    };
