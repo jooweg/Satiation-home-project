@@ -1031,12 +1031,12 @@ opponentAvgDaysBetweenSessions = [participantAvgDaysBetweenSessions,participantA
 			
 			function updateSubjectSessionFileOnDisk() {
 				// update subject JSON session info
-				subjInfo[0].next_session++;
 				subjInfo[0].last_session_date = (new Date()).toString();
 				if (subjInfo[0].next_session==1) {
 					// when this is the first session, record the date for determining how long participant is in the study during later sessions
 					subjInfo[0].first_session_date = subjInfo[0].last_session_date;
 				}
+				subjInfo[0].next_session++;
 				var subjInfoURL = experimentVersion+'_session_playlist_'+subjectCode+'.json';
 				console_log('writing to '+subjInfoURL);
 				console_log(JSON.stringify(subjInfo));
