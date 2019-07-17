@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+
+<head>
+  <script src="js/jquery.min.js"></script>
+  <script src="../jspsych.js"></script>
+  <script src="../plugins/jspsych-single-stim-showtime.js"></script>
+  <link rel="stylesheet" href="../css/jspsych.css"></link>
+</head>
+
+<body>
+  <div id="jspsych-target"></div>
+</body>
+<script>
+  var animation_trial = {
+    type: 'single-stim-showtime',
+    reference_time: 0,
+    timing_stim: 5000,
+    //stimulus: ['img/happy_face_1.jpg'],
+  };
+
+
+  jsPsych.init({
+    display_element: $('#jspsych-target'),
+    timeline: [animation_trial],
+    on_finish: function() {
+      jsPsych.data.displayData();
+    }
+  });
+</script>
+
+</html>

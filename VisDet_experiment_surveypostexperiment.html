@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+  <head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="jspsych-5.0.3/jspsych.js"></script>
+    <script src="jspsych-5.0.3/plugins/jspsych-survey-likert-required.js"></script>
+    <script src="jspsych-5.0.3/plugins/jspsych-instructions.js"></script>
+    <link rel="stylesheet" href="jspsych-5.0.3/css/jspsych.css"></link>
+  </head>
+  <body>
+    <div id="jspsych-target"></div>
+  </body>
+  <script>
+	var subjectCode = jsPsych.data.getURLVariable('subject') || "noID"; // get subject code from URL
+    jsPsych.data.addProperties({
+        subject: subjectCode,
+    });	
+	
+  // defining groups of questions that will go together.
+  var page_1_questions = ["How often do you chew gum?"];
+  var page_2_questions = ["I eat gum when I'm bored","I eat gum when I want to focus","I eat gum after a meal","I eat gum when I want something sweet","I eat gum when I want something savory","What kind of gum do you prefer?","Do you eat sugar-free gum?"]
+/** "Ik eet kauwgum als ik honger heb"
+* “Als ik me verveel”
+* “Als ik me wil concentreren”
+* “Na het eten”
+* “Als ik zin heb in iets zoets eet ik kauwgum”
+* “Als ik zin heb in iets hartigs eet ik kauwgum”
+* “Wat voor kauwgum eet je?”
+    * suikervrij
+    * zoet vs fris (menthol)
+*/
+
+	// answers to gum use frequency, taken from Smith (2012): "Effects of Chewing Gum on Stress and Health: A Replication and Investigation of Dose–Response". Stress Health. (see their paper for distribution of frequencies in workers from public sector organisations.
+	var gum_frequency_responses = ["Never","Occasionally","Once a month","Once per week","5 or more times a week","Once a day","More than once a day"];
+	var agreement_responses = ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"];
+	var gum_preference_responses= ["Sweet","Fresh","Fruity","Other"];
+	var yesno_responses = ["Yes","No","I don't know"];
+
+	var gum_page_1 = {
+	  type: 'survey-likert-required',
+	  questions: [page_1_questions],
+	  labels: [gum_frequency_responses], // need one scale for every question on a page
+	  required: [true]   // set whether questions are required      
+	};
+	var gum_page_2 = {
+	  type: 'survey-likert-required',
+	  questions: page_2_questions,
+	  labels: [agreement_responses,agreement_responses,agreement_responses,agreement_responses,agreement_responses,gum_preference_responses,yesno_responses], // need one scale for every question on a page
+	  preamble: function() {
+	  	// whether the questions are required depends on the previous answer
+	  	if (jsPsych.data.getData()[0].responses[7]=="0") {return "Since you never eat gum, you can skip these questions by pressing \'Submit Answers\' at the bottom of the page"} else {return "Please answer the following questions:"}	  	
+	  },   // set whether questions are required      
+	  required: function() {
+	  	// whether the questions are required depends on the previous answer
+	  	if (jsPsych.data.getData()[0].responses[7]=="0") {return [false,false,false,false,false,false,false]} else {return [true,true,true,true,true,true,true]}	  	
+	  },   // set whether questions are required      
+	  
+	  on_finish: function () {
+		  var savePath = 'survey_post_experiment-'+subjectCode + '-' + (new Date()).toString() +'.csv';
+		  csvData = jsPsych.data.dataAsCSV();
+		  writeDataCSV(savePath,csvData);
+		  }
+	};
+    var debrief_block = {
+		type: 'instructions',
+		show_clickable_nav: false,
+		pages: ["Thank you for participating in this survey. Have a nice day!"],
+    };
+
+	jsPsych.init({
+	display_element: $('#jspsych-target'),
+	timeline: [gum_page_1,gum_page_2,debrief_block],
+	on_finish: function() {} //{ jsPsych.data.displayData(); }
+	});
+
+    
+    // Function to save experimental data to a CSV file
+    function writeDataCSV(filename, filedata) {
+    	console.log('writing data to '+filename);
+        $.ajax({
+            type: 'post',
+            cache: false,
+            url: 'save_data_csv.php', // this is the path to the PHP script
+            data: {
+                filename: filename,
+                filedata: filedata
+            }
+        });
+    }
+
+  </script>
+</html>
